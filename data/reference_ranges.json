@@ -1,158 +1,591 @@
 {
-  "2345-7": {
-    "test_name": "Glucose",
-    "reference_low": 70.0,
-    "reference_high": 100.0,
-    "unit": "mg/dL"
-  },
-  "718-7": {
-    "test_name": "Hemoglobin",
-    "reference_low": 12.0,
-    "reference_high": 17.5,
-    "unit": "g/dL"
-  },
-  "4548-4": {
-    "test_name": "Hemoglobin A1c",
-    "reference_low": 4.0,
-    "reference_high": 5.6,
-    "unit": "%"
-  },
-  "2093-3": {
-    "test_name": "Total Cholesterol",
-    "reference_low": 0.0,
-    "reference_high": 200.0,
-    "unit": "mg/dL"
-  },
-  "2571-8": {
-    "test_name": "Triglycerides",
-    "reference_low": 0.0,
-    "reference_high": 150.0,
-    "unit": "mg/dL"
-  },
-  "2085-9": {
-    "test_name": "HDL Cholesterol",
-    "reference_low": 40.0,
-    "reference_high": 60.0,
-    "unit": "mg/dL"
-  },
-  "2089-1": {
-    "test_name": "LDL Cholesterol",
-    "reference_low": 0.0,
-    "reference_high": 100.0,
-    "unit": "mg/dL"
-  },
-  "1742-6": {
-    "test_name": "ALT",
-    "reference_low": 7.0,
-    "reference_high": 56.0,
-    "unit": "U/L"
-  },
-  "1920-8": {
-    "test_name": "AST",
-    "reference_low": 10.0,
-    "reference_high": 40.0,
-    "unit": "U/L"
-  },
-  "2160-0": {
-    "test_name": "Creatinine",
-    "reference_low": 0.7,
-    "reference_high": 1.3,
-    "unit": "mg/dL"
-  },
-  "3094-0": {
-    "test_name": "BUN",
-    "reference_low": 7.0,
-    "reference_high": 20.0,
-    "unit": "mg/dL"
-  },
-  "17861-6": {
-    "test_name": "Calcium",
-    "reference_low": 8.5,
-    "reference_high": 10.5,
-    "unit": "mg/dL"
-  },
-  "2498-4": {
-    "test_name": "TSH",
-    "reference_low": 0.4,
-    "reference_high": 4.0,
-    "unit": "mIU/L"
-  },
-  "30522-7": {
-    "test_name": "T3 Free",
-    "reference_low": 2.3,
-    "reference_high": 4.2,
-    "unit": "pg/mL"
-  },
-  "30534-2": {
-    "test_name": "T4 Free",
-    "reference_low": 0.8,
-    "reference_high": 1.8,
-    "unit": "ng/dL"
-  },
-  "6299-2": {
-    "test_name": "B12",
-    "reference_low": 200.0,
-    "reference_high": 900.0,
-    "unit": "pg/mL"
-  },
-  "2287-8": {
-    "test_name": "Iron",
-    "reference_low": 60.0,
-    "reference_high": 170.0,
-    "unit": "ug/dL"
-  },
-  "14959-1": {
-    "test_name": "MPV",
-    "reference_low": 7.5,
-    "reference_high": 12.5,
-    "unit": "fL"
-  },
-  "6690-2": {
-    "test_name": "WBC",
-    "reference_low": 4.5,
-    "reference_high": 11.0,
-    "unit": "K/uL"
-  },
-  "789-8": {
-    "test_name": "RBC",
-    "reference_low": 4.5,
-    "reference_high": 5.9,
-    "unit": "M/uL"
-  },
-  "4544-3": {
-    "test_name": "Hematocrit",
-    "reference_low": 36.0,
-    "reference_high": 50.0,
-    "unit": "%"
-  },
-  "787-2": {
-    "test_name": "MCV",
-    "reference_low": 80.0,
-    "reference_high": 100.0,
-    "unit": "fL"
-  },
-  "785-6": {
-    "test_name": "MCH",
-    "reference_low": 27.0,
-    "reference_high": 33.0,
-    "unit": "pg"
-  },
-  "786-4": {
-    "test_name": "MCHC",
-    "reference_low": 32.0,
-    "reference_high": 36.0,
-    "unit": "g/dL"
-  },
-  "788-0": {
-    "test_name": "RDW",
-    "reference_low": 11.5,
-    "reference_high": 14.5,
-    "unit": "%"
-  },
-  "777-3": {
-    "test_name": "Platelet Count",
-    "reference_low": 150.0,
-    "reference_high": 400.0,
-    "unit": "K/uL"
+  "dataset_name": "MedReportAI reference intervals",
+  "version": "0.1-demo",
+  "created_date": "2026-09-25",
+  "status": "initial_demo_dataset",
+  "important_scope_note": "These are documented demo/reference intervals, not universal patient-specific clinical ranges. If the uploaded lab report provides its own reference interval, the application should prefer that interval. Sex-stratified rows require the population dimension to be known; do not silently guess.",
+  "project_alignment_note": "PROJECT.md names NHANES as the intended reference-range source. These initial rows use documented MedlinePlus intervals so the repo can immediately stop using synthetic ranges. NHANES-specific provenance should be a subsequent hardening step.",
+  "ranges_by_loinc": {
+    "2345-7": [
+      {
+        "test_name": "Glucose",
+        "loinc_code": "2345-7",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 70,
+        "reference_high": 100,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "17861-6": [
+      {
+        "test_name": "Calcium",
+        "loinc_code": "17861-6",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 8.5,
+        "reference_high": 10.2,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "2951-2": [
+      {
+        "test_name": "Sodium",
+        "loinc_code": "2951-2",
+        "unit": "mmol/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 135,
+        "reference_high": 145,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "2823-3": [
+      {
+        "test_name": "Potassium",
+        "loinc_code": "2823-3",
+        "unit": "mmol/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 3.7,
+        "reference_high": 5.2,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "2028-9": [
+      {
+        "test_name": "Carbon dioxide (total)",
+        "loinc_code": "2028-9",
+        "unit": "mmol/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 23,
+        "reference_high": 29,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "2075-0": [
+      {
+        "test_name": "Chloride",
+        "loinc_code": "2075-0",
+        "unit": "mmol/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 96,
+        "reference_high": 106,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "1751-7": [
+      {
+        "test_name": "Albumin",
+        "loinc_code": "1751-7",
+        "unit": "g/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 3.4,
+        "reference_high": 5.4,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "2885-2": [
+      {
+        "test_name": "Total protein",
+        "loinc_code": "2885-2",
+        "unit": "g/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 6.0,
+        "reference_high": 8.3,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "common_adult",
+          "source_url": "https://medlineplus.gov/laboratorytests.html"
+        }
+      }
+    ],
+    "6768-6": [
+      {
+        "test_name": "Alkaline phosphatase",
+        "loinc_code": "6768-6",
+        "unit": "U/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 20,
+        "reference_high": 130,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "1742-6": [
+      {
+        "test_name": "ALT",
+        "loinc_code": "1742-6",
+        "unit": "U/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 4,
+        "reference_high": 36,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "1920-8": [
+      {
+        "test_name": "AST",
+        "loinc_code": "1920-8",
+        "unit": "U/L",
+        "specimen": "Serum or Plasma",
+        "reference_low": 8,
+        "reference_high": 33,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "1975-2": [
+      {
+        "test_name": "Total bilirubin",
+        "loinc_code": "1975-2",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 0.1,
+        "reference_high": 1.2,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "common_adult",
+          "source_url": "https://medlineplus.gov/laboratorytests.html"
+        }
+      }
+    ],
+    "3094-0": [
+      {
+        "test_name": "BUN",
+        "loinc_code": "3094-0",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 6,
+        "reference_high": 20,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "2160-0": [
+      {
+        "test_name": "Creatinine",
+        "loinc_code": "2160-0",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 0.6,
+        "reference_high": 1.3,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CMP",
+          "source_url": "https://medlineplus.gov/ency/article/003468.htm"
+        }
+      }
+    ],
+    "789-8": [
+      {
+        "test_name": "RBC count",
+        "loinc_code": "789-8",
+        "unit": "million cells/mcL",
+        "specimen": "Blood",
+        "reference_low": 4.6,
+        "reference_high": 6.2,
+        "population": {
+          "age": "adult",
+          "sex": "male"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      },
+      {
+        "test_name": "RBC count",
+        "loinc_code": "789-8",
+        "unit": "million cells/mcL",
+        "specimen": "Blood",
+        "reference_low": 4.2,
+        "reference_high": 5.4,
+        "population": {
+          "age": "adult",
+          "sex": "female"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "6690-2": [
+      {
+        "test_name": "WBC count",
+        "loinc_code": "6690-2",
+        "unit": "cells/mcL",
+        "specimen": "Blood",
+        "reference_low": 4500,
+        "reference_high": 11000,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "718-7": [
+      {
+        "test_name": "Hemoglobin",
+        "loinc_code": "718-7",
+        "unit": "g/dL",
+        "specimen": "Blood",
+        "reference_low": 13,
+        "reference_high": 18,
+        "population": {
+          "age": "adult",
+          "sex": "male"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      },
+      {
+        "test_name": "Hemoglobin",
+        "loinc_code": "718-7",
+        "unit": "g/dL",
+        "specimen": "Blood",
+        "reference_low": 12,
+        "reference_high": 16,
+        "population": {
+          "age": "adult",
+          "sex": "female"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "4544-3": [
+      {
+        "test_name": "Hematocrit",
+        "loinc_code": "4544-3",
+        "unit": "%",
+        "specimen": "Blood",
+        "reference_low": 40,
+        "reference_high": 55,
+        "population": {
+          "age": "adult",
+          "sex": "male"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      },
+      {
+        "test_name": "Hematocrit",
+        "loinc_code": "4544-3",
+        "unit": "%",
+        "specimen": "Blood",
+        "reference_low": 36,
+        "reference_high": 48,
+        "population": {
+          "age": "adult",
+          "sex": "female"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "787-2": [
+      {
+        "test_name": "MCV",
+        "loinc_code": "787-2",
+        "unit": "fL",
+        "specimen": "Red Blood Cells",
+        "reference_low": 80,
+        "reference_high": 100,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "785-6": [
+      {
+        "test_name": "MCH",
+        "loinc_code": "785-6",
+        "unit": "pg/cell",
+        "specimen": "Red Blood Cells",
+        "reference_low": 27,
+        "reference_high": 32,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "786-4": [
+      {
+        "test_name": "MCHC",
+        "loinc_code": "786-4",
+        "unit": "g/dL",
+        "specimen": "Red Blood Cells",
+        "reference_low": 32,
+        "reference_high": 36,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "777-3": [
+      {
+        "test_name": "Platelet count",
+        "loinc_code": "777-3",
+        "unit": "cells/mcL",
+        "specimen": "Blood",
+        "reference_low": 150000,
+        "reference_high": 400000,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "CBC",
+          "source_url": "https://medlineplus.gov/ency/article/003642.htm"
+        }
+      }
+    ],
+    "2093-3": [
+      {
+        "test_name": "Total cholesterol",
+        "loinc_code": "2093-3",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 0,
+        "reference_high": 200,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "cholesterol",
+          "source_url": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+        }
+      }
+    ],
+    "2089-1": [
+      {
+        "test_name": "LDL cholesterol",
+        "loinc_code": "2089-1",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 0,
+        "reference_high": 100,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "cholesterol",
+          "source_url": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+        }
+      }
+    ],
+    "2085-9": [
+      {
+        "test_name": "HDL cholesterol",
+        "loinc_code": "2085-9",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 40,
+        "reference_high": 999,
+        "population": {
+          "age": "adult",
+          "sex": "male"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "cholesterol",
+          "source_url": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+        }
+      },
+      {
+        "test_name": "HDL cholesterol",
+        "loinc_code": "2085-9",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 50,
+        "reference_high": 999,
+        "population": {
+          "age": "adult",
+          "sex": "female"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "cholesterol",
+          "source_url": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+        }
+      }
+    ],
+    "2571-8": [
+      {
+        "test_name": "Triglycerides",
+        "loinc_code": "2571-8",
+        "unit": "mg/dL",
+        "specimen": "Serum or Plasma",
+        "reference_low": 0,
+        "reference_high": 150,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "cholesterol",
+          "source_url": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+        }
+      }
+    ],
+    "4548-4": [
+      {
+        "test_name": "Hemoglobin A1c",
+        "loinc_code": "4548-4",
+        "unit": "%",
+        "specimen": "Blood",
+        "reference_low": 0,
+        "reference_high": 5.7,
+        "population": {
+          "age": "adult",
+          "sex": "all"
+        },
+        "source": {
+          "organization": "U.S. National Library of Medicine / MedlinePlus",
+          "source_type": "a1c",
+          "source_url": "https://medlineplus.gov/lab-tests/hemoglobin-a1c-hba1c-test/"
+        }
+      }
+    ]
   }
 }

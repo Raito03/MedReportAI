@@ -26,6 +26,7 @@ class RangeCheckedValue(BaseModel):
 class RiskFlaggedValue(BaseModel):
     """Output of Risk Flagging Agent."""
     test_name: str
+    loinc_code: str = ""  # Threaded from extraction for citation lookup
     value: float
     unit: str
     status: str  # "normal" | "mildly_abnormal" | "critical"

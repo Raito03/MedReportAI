@@ -61,12 +61,14 @@ Return ONLY a JSON array. No markdown fences, no explanation, just the JSON.
 
 For each value, use these exact keys:
 - test_name
+- loinc_code (copy from input exactly)
 - value (number)
 - unit
 - status: one of "normal", "mildly_abnormal", "critical"
 - reasoning: one sentence explaining the classification
 
-IMPORTANT: Do NOT diagnose. Only classify deviation from range."""
+IMPORTANT: Do NOT diagnose. Only classify deviation from range.
+IMPORTANT: Always include loinc_code exactly as provided in the input."""
 
 
 def _extract_json(text: str):

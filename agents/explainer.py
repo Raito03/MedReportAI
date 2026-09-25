@@ -2,6 +2,8 @@
 
 LLM call #3.
 Tool defined with input_schema/output_schema per spec.
+
+Uses MedlinePlus Connect for real citations (not fabricated).
 """
 
 import json
@@ -14,6 +16,7 @@ from openrouter_agent import call_model, step_count_is, tool
 from core.config import OPENROUTER_MODEL
 from core.llm_client import get_client
 from core.schemas import RiskFlaggedValue, FinalExplanation
+from tools.medlineplus_connect import get_citation, fetch_medlineplus_info
 
 
 # --- SDK Tool Schemas ---
@@ -62,9 +65,9 @@ For each value, use these exact keys:
 NO "you have..." or "this indicates..." phrasing. Use hedging: \
 "results in this range are generally considered..."
 - doctor_questions: array of 2-3 strings
-- citation: source reference (e.g. "MedlinePlus: [topic]")
+- citation: USE THE CITATION PROVIDED IN THE INPUT — do not make up citations
 
-CRITICAL: Never state or imply a diagnosis. Always include a citation."""
+CRITICAL: Never state or imply a diagnosis. Always use the citation provided."""
 
 
 def _extract_json(text: str):
@@ -94,9 +97,22 @@ def _extract_json(text: str):
 # --- Async Entry Point ---
 
 async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation]:
-    """Generate plain-language explanations for each risk-flagged value."""
+    """Generate plain-language explanations for each risk-flagged value.
+
+    Each explanation gets a real MedlinePlus citation (not fabricated).
+    """
     client = get_client()
-    context = json.dumps([r.model_dump() for r in risk_flagged], indent=2)
+
+    # Enrich risk_flagged values with real citations from MedlinePlus Connect
+    enriched = []
+    for r in risk_flagged:
+        test_name = r.test_name if hasattr(r, "test_name") else r.get("test_name", "")
+        loinc = r.loinc_code if hasattr(r, "loinc_code") else r.get("loinc_code", "")
+        citation = get_citation(loinc, test_name)
+        r_dict = r.model_dump() if hasattr(r, "model_dump") else r
+        enriched.append({**r_dict, "citation": citation})
+
+    context = json.dumps(enriched, indent=2)
     combined = f"{SYSTEM_PROMPT}\n\nUSER INPUT:\nExplain these lab results:\n{context}"
 
     result = call_model(
@@ -115,7 +131,14 @@ async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation
     if isinstance(data, dict):
         data = data.get("explanations", data.get("values", []))
 
-    output = ExplanationOutput(
-        explanations=[FinalExplanation(**item) for item in data]
-    )
-    return output.explanations
+    # Post-process: ensure citation is never fabricated
+    explanations = []
+    for item in data:
+        exp = FinalExplanation(**item)
+        # If the LLM's citation looks fabricated (no URL, no parenthetical), replace
+        if exp.citation.startswith("MedlinePlus:") and "(" not in exp.citation:
+            real_citation = get_citation("", exp.test_name)
+            exp.citation = real_citation
+        explanations.append(exp)
+
+    return explanations

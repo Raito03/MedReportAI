@@ -1,0 +1,471 @@
+{
+  "dataset_name": "MedReportAI MedlinePlus Connect LOINC mappings",
+  "version": "0.1-demo",
+  "created_date": "2026-09-25",
+  "service": {
+    "base_url": "https://connect.medlineplus.gov/service",
+    "documentation": "https://medlineplus.gov/medlineplus-connect/web-service/"
+  },
+  "note": "The Connect request URL is the authoritative mapping mechanism. Fallback pages are included for human-readable grounding but are not claimed to be the exact page returned by Connect for every code.",
+  "mappings": {
+    "2345-7": {
+      "loinc_code": "2345-7",
+      "loinc_url": "https://loinc.org/2345-7",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2345-7&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "17861-6": {
+      "loinc_code": "17861-6",
+      "loinc_url": "https://loinc.org/17861-6",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=17861-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "2951-2": {
+      "loinc_code": "2951-2",
+      "loinc_url": "https://loinc.org/2951-2",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2951-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "2823-3": {
+      "loinc_code": "2823-3",
+      "loinc_url": "https://loinc.org/2823-3",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2823-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "2028-9": {
+      "loinc_code": "2028-9",
+      "loinc_url": "https://loinc.org/2028-9",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2028-9&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "2075-0": {
+      "loinc_code": "2075-0",
+      "loinc_url": "https://loinc.org/2075-0",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2075-0&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "1751-7": {
+      "loinc_code": "1751-7",
+      "loinc_url": "https://loinc.org/1751-7",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1751-7&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "2885-2": {
+      "loinc_code": "2885-2",
+      "loinc_url": "https://loinc.org/2885-2",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2885-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "6768-6": {
+      "loinc_code": "6768-6",
+      "loinc_url": "https://loinc.org/6768-6",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=6768-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "1742-6": {
+      "loinc_code": "1742-6",
+      "loinc_url": "https://loinc.org/1742-6",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1742-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "1920-8": {
+      "loinc_code": "1920-8",
+      "loinc_url": "https://loinc.org/1920-8",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1920-8&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+      "fallback_only": true
+    },
+    "1975-2": {
+      "loinc_code": "1975-2",
+      "loinc_url": "https://loinc.org/1975-2",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1975-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/bilirubin-blood-test/",
+      "fallback_only": true
+    },
+    "3094-0": {
+      "loinc_code": "3094-0",
+      "loinc_url": "https://loinc.org/3094-0",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=3094-0&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/bun-blood-urea-nitrogen/",
+      "fallback_only": true
+    },
+    "2160-0": {
+      "loinc_code": "2160-0",
+      "loinc_url": "https://loinc.org/2160-0",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2160-0&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/creatinine-test/",
+      "fallback_only": true
+    },
+    "789-8": {
+      "loinc_code": "789-8",
+      "loinc_url": "https://loinc.org/789-8",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=789-8&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": null,
+      "fallback_only": true
+    },
+    "6690-2": {
+      "loinc_code": "6690-2",
+      "loinc_url": "https://loinc.org/6690-2",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=6690-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+      "fallback_only": true
+    },
+    "718-7": {
+      "loinc_code": "718-7",
+      "loinc_url": "https://loinc.org/718-7",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=718-7&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/hemoglobin-test/",
+      "fallback_only": true
+    },
+    "4544-3": {
+      "loinc_code": "4544-3",
+      "loinc_url": "https://loinc.org/4544-3",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=4544-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/hematocrit-test/",
+      "fallback_only": true
+    },
+    "787-2": {
+      "loinc_code": "787-2",
+      "loinc_url": "https://loinc.org/787-2",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=787-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/mcv-mean-corpuscular-volume/",
+      "fallback_only": true
+    },
+    "785-6": {
+      "loinc_code": "785-6",
+      "loinc_url": "https://loinc.org/785-6",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=785-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": null,
+      "fallback_only": true
+    },
+    "786-4": {
+      "loinc_code": "786-4",
+      "loinc_url": "https://loinc.org/786-4",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=786-4&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": null,
+      "fallback_only": true
+    },
+    "777-3": {
+      "loinc_code": "777-3",
+      "loinc_url": "https://loinc.org/777-3",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=777-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/platelet-tests/",
+      "fallback_only": true
+    },
+    "2093-3": {
+      "loinc_code": "2093-3",
+      "loinc_url": "https://loinc.org/2093-3",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2093-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/cholesterol-levels/",
+      "fallback_only": true
+    },
+    "2089-1": {
+      "loinc_code": "2089-1",
+      "loinc_url": "https://loinc.org/2089-1",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2089-1&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/cholesterol-levels/",
+      "fallback_only": true
+    },
+    "2085-9": {
+      "loinc_code": "2085-9",
+      "loinc_url": "https://loinc.org/2085-9",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2085-9&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/cholesterol-levels/",
+      "fallback_only": true
+    },
+    "2571-8": {
+      "loinc_code": "2571-8",
+      "loinc_url": "https://loinc.org/2571-8",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2571-8&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/triglycerides-test/",
+      "fallback_only": true
+    },
+    "4548-4": {
+      "loinc_code": "4548-4",
+      "loinc_url": "https://loinc.org/4548-4",
+      "medlineplus_connect": {
+        "code_system": "2.16.840.1.113883.6.1",
+        "request_url": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=4548-4&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+        "resolution": "runtime",
+        "expected_response": [
+          "title",
+          "link",
+          "summary",
+          "author"
+        ]
+      },
+      "known_human_readable_fallback_page": "https://medlineplus.gov/lab-tests/hemoglobin-a1c-hba1c-test/",
+      "fallback_only": true
+    }
+  }
+}

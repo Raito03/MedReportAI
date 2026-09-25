@@ -1,0 +1,364 @@
+{
+  "dataset_name": "MedReportAI supported laboratory tests",
+  "version": "0.1-demo",
+  "created_date": "2026-09-25",
+  "test_count": 27,
+  "notes": [
+    "LOINC identifies the laboratory observation; it does not define a universal reference interval.",
+    "MedlinePlus Connect is the runtime mechanism for LOINC-to-MedlinePlus mapping.",
+    "The patient's own laboratory reference interval should take precedence when present."
+  ],
+  "tests": [
+    {
+      "test_name": "Glucose",
+      "loinc_code": "2345-7",
+      "loinc_url": "https://loinc.org/2345-7",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2345-7&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Calcium",
+      "loinc_code": "17861-6",
+      "loinc_url": "https://loinc.org/17861-6",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=17861-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Sodium",
+      "loinc_code": "2951-2",
+      "loinc_url": "https://loinc.org/2951-2",
+      "canonical_unit": "mmol/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2951-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Potassium",
+      "loinc_code": "2823-3",
+      "loinc_url": "https://loinc.org/2823-3",
+      "canonical_unit": "mmol/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2823-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Carbon dioxide (total)",
+      "loinc_code": "2028-9",
+      "loinc_url": "https://loinc.org/2028-9",
+      "canonical_unit": "mmol/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2028-9&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Chloride",
+      "loinc_code": "2075-0",
+      "loinc_url": "https://loinc.org/2075-0",
+      "canonical_unit": "mmol/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2075-0&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Albumin",
+      "loinc_code": "1751-7",
+      "loinc_url": "https://loinc.org/1751-7",
+      "canonical_unit": "g/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1751-7&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Total protein",
+      "loinc_code": "2885-2",
+      "loinc_url": "https://loinc.org/2885-2",
+      "canonical_unit": "g/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2885-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Alkaline phosphatase",
+      "loinc_code": "6768-6",
+      "loinc_url": "https://loinc.org/6768-6",
+      "canonical_unit": "U/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=6768-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "ALT",
+      "loinc_code": "1742-6",
+      "loinc_url": "https://loinc.org/1742-6",
+      "canonical_unit": "U/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1742-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "AST",
+      "loinc_code": "1920-8",
+      "loinc_url": "https://loinc.org/1920-8",
+      "canonical_unit": "U/L",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1920-8&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/"
+    },
+    {
+      "test_name": "Total bilirubin",
+      "loinc_code": "1975-2",
+      "loinc_url": "https://loinc.org/1975-2",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=1975-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/bilirubin-blood-test/"
+    },
+    {
+      "test_name": "BUN",
+      "loinc_code": "3094-0",
+      "loinc_url": "https://loinc.org/3094-0",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=3094-0&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/bun-blood-urea-nitrogen/"
+    },
+    {
+      "test_name": "Creatinine",
+      "loinc_code": "2160-0",
+      "loinc_url": "https://loinc.org/2160-0",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2160-0&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/creatinine-test/"
+    },
+    {
+      "test_name": "RBC count",
+      "loinc_code": "789-8",
+      "loinc_url": "https://loinc.org/789-8",
+      "canonical_unit": "million cells/mcL",
+      "specimen": "Blood",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=789-8&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": null
+    },
+    {
+      "test_name": "WBC count",
+      "loinc_code": "6690-2",
+      "loinc_url": "https://loinc.org/6690-2",
+      "canonical_unit": "cells/mcL",
+      "specimen": "Blood",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=6690-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/white-blood-count-wbc/"
+    },
+    {
+      "test_name": "Hemoglobin",
+      "loinc_code": "718-7",
+      "loinc_url": "https://loinc.org/718-7",
+      "canonical_unit": "g/dL",
+      "specimen": "Blood",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=718-7&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/hemoglobin-test/"
+    },
+    {
+      "test_name": "Hematocrit",
+      "loinc_code": "4544-3",
+      "loinc_url": "https://loinc.org/4544-3",
+      "canonical_unit": "%",
+      "specimen": "Blood",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=4544-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/hematocrit-test/"
+    },
+    {
+      "test_name": "MCV",
+      "loinc_code": "787-2",
+      "loinc_url": "https://loinc.org/787-2",
+      "canonical_unit": "fL",
+      "specimen": "Red Blood Cells",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=787-2&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/mcv-mean-corpuscular-volume/"
+    },
+    {
+      "test_name": "MCH",
+      "loinc_code": "785-6",
+      "loinc_url": "https://loinc.org/785-6",
+      "canonical_unit": "pg/cell",
+      "specimen": "Red Blood Cells",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=785-6&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": null
+    },
+    {
+      "test_name": "MCHC",
+      "loinc_code": "786-4",
+      "loinc_url": "https://loinc.org/786-4",
+      "canonical_unit": "g/dL",
+      "specimen": "Red Blood Cells",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=786-4&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": null
+    },
+    {
+      "test_name": "Platelet count",
+      "loinc_code": "777-3",
+      "loinc_url": "https://loinc.org/777-3",
+      "canonical_unit": "cells/mcL",
+      "specimen": "Blood",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=777-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/platelet-tests/"
+    },
+    {
+      "test_name": "Total cholesterol",
+      "loinc_code": "2093-3",
+      "loinc_url": "https://loinc.org/2093-3",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2093-3&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+    },
+    {
+      "test_name": "LDL cholesterol",
+      "loinc_code": "2089-1",
+      "loinc_url": "https://loinc.org/2089-1",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2089-1&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+    },
+    {
+      "test_name": "HDL cholesterol",
+      "loinc_code": "2085-9",
+      "loinc_url": "https://loinc.org/2085-9",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2085-9&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/cholesterol-levels/"
+    },
+    {
+      "test_name": "Triglycerides",
+      "loinc_code": "2571-8",
+      "loinc_url": "https://loinc.org/2571-8",
+      "canonical_unit": "mg/dL",
+      "specimen": "Serum or Plasma",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=2571-8&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/triglycerides-test/"
+    },
+    {
+      "test_name": "Hemoglobin A1c",
+      "loinc_code": "4548-4",
+      "loinc_url": "https://loinc.org/4548-4",
+      "canonical_unit": "%",
+      "specimen": "Blood",
+      "population_dimensions": [
+        "age",
+        "sex"
+      ],
+      "medlineplus_connect_request": "https://connect.medlineplus.gov/service?mainSearchCriteria.v.cs=2.16.840.1.113883.6.1&mainSearchCriteria.v.c=4548-4&informationRecipient.languageCode.c=en&knowledgeResponseType=application/json",
+      "known_medlineplus_fallback_page": "https://medlineplus.gov/lab-tests/hemoglobin-a1c-hba1c-test/"
+    }
+  ]
+}
