@@ -2,16 +2,111 @@
 
 Tests against the supplied data/reference_ranges.json (MedlinePlus intervals).
 Covers: known LOINC, unknown LOINC, missing ranges, unit mismatch,
-sex-specific ranges, boundary values, and the full supported_labs integration.
+unit conversion, sex-specific ranges, boundary values, and the full supported_labs integration.
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agents.reference_range import lookup_ranges, lookup_range_detail, _load_ranges, _load_supported_labs
+from agents.reference_range import (
+    lookup_ranges, lookup_range_detail, _load_ranges, _load_supported_labs,
+    _get_conversion_factor, _convert_value,
+)
 from tools.medlineplus_connect import resolve_loinc_from_test_name, get_citation
 from core.schemas import ExtractedLabValue
+
+
+# ============================================================
+# Unit Conversion Tests
+# ============================================================
+
+def test_wbc_kul_to_cells_mcl():
+    """7 K/uL → 7000 cells/mcL → should be in range (4500-11000)."""
+    values = [ExtractedLabValue(test_name="WBC count", loinc_code="6690-2", value=7.0, unit="K/uL")]
+    result = lookup_ranges(values)
+    assert len(result) == 1
+    assert result[0].value == 7000.0, f"Expected 7000, got {result[0].value}"
+    assert result[0].unit == "cells/mcL", f"Expected cells/mcL, got {result[0].unit}"
+    assert result[0].in_range is True, "7000 cells/mcL should be in range 4500-11000"
+    assert result[0].range_available is True
+    print("  PASS: WBC 7 K/uL → 7000 cells/mcL → in range")
+
+
+def test_wbc_kul_boundary_low():
+    """4.5 K/uL → 4500 cells/mcL → exact lower boundary, in range."""
+    values = [ExtractedLabValue(test_name="WBC count", loinc_code="6690-2", value=4.5, unit="K/uL")]
+    result = lookup_ranges(values)
+    assert result[0].value == 4500.0
+    assert result[0].in_range is True, "4500 cells/mcL should be in range (inclusive lower)"
+    print("  PASS: WBC 4.5 K/uL → 4500 cells/mcL → boundary in range")
+
+
+def test_wbc_kul_boundary_high():
+    """11 K/uL → 11000 cells/mcL → exact upper boundary, in range."""
+    values = [ExtractedLabValue(test_name="WBC count", loinc_code="6690-2", value=11.0, unit="K/uL")]
+    result = lookup_ranges(values)
+    assert result[0].value == 11000.0
+    assert result[0].in_range is True, "11000 cells/mcL should be in range (inclusive upper)"
+    print("  PASS: WBC 11 K/uL → 11000 cells/mcL → boundary in range")
+
+
+def test_wbc_kul_below_range():
+    """4 K/uL → 4000 cells/mcL → below range."""
+    values = [ExtractedLabValue(test_name="WBC count", loinc_code="6690-2", value=4.0, unit="K/uL")]
+    result = lookup_ranges(values)
+    assert result[0].value == 4000.0
+    assert result[0].in_range is False, "4000 cells/mcL should be below range 4500-11000"
+    print("  PASS: WBC 4 K/uL → 4000 cells/mcL → below range")
+
+
+def test_wbc_kul_above_range():
+    """12 K/uL → 12000 cells/mcL → above range."""
+    values = [ExtractedLabValue(test_name="WBC count", loinc_code="6690-2", value=12.0, unit="K/uL")]
+    result = lookup_ranges(values)
+    assert result[0].value == 12000.0
+    assert result[0].in_range is False, "12000 cells/mcL should be above range 4500-11000"
+    print("  PASS: WBC 12 K/uL → 12000 cells/mcL → above range")
+
+
+def test_wbc_10e3_to_cells_mcl():
+    """7 10^3/uL → 7000 cells/mcL → should be in range."""
+    values = [ExtractedLabValue(test_name="WBC count", loinc_code="6690-2", value=7.0, unit="10^3/uL")]
+    result = lookup_ranges(values)
+    assert result[0].value == 7000.0
+    assert result[0].in_range is True
+    print("  PASS: WBC 7 10^3/uL → 7000 cells/mcL → in range")
+
+
+def test_conversion_factor_lookup():
+    """Direct conversion factor tests."""
+    assert _get_conversion_factor("K/uL", "cells/mcL") == 1000.0
+    assert _get_conversion_factor("cells/mcL", "K/uL") == 0.001
+    assert _get_conversion_factor("10^3/uL", "cells/mcL") == 1000.0
+    assert _get_conversion_factor("M/uL", "million cells/mcL") == 1.0
+    assert _get_conversion_factor("mg/dL", "mg/dL") == 1.0
+    assert _get_conversion_factor("mg/dL", "mmol/L") is None  # No generic conversion
+    print("  PASS: Conversion factor lookup")
+
+
+def test_convert_value():
+    """Direct value conversion tests."""
+    val, unit, ok = _convert_value(7.0, "K/uL", "cells/mcL")
+    assert val == 7000.0 and ok
+    val, unit, ok = _convert_value(7000.0, "cells/mcL", "K/uL")
+    assert val == 7.0 and ok
+    val, unit, ok = _convert_value(92.0, "mg/dL", "mmol/L")
+    assert ok is False  # Not supported
+    print("  PASS: Value conversion")
+
+
+def test_no_generic_mgdl_to_mmol_conversion():
+    """mg/dL → mmol/L must NOT be silently converted (analyte-specific)."""
+    # Glucose: 5.1 mmol/L vs reference 70-100 mg/dL
+    values = [ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=5.1, unit="mmol/L")]
+    result = lookup_ranges(values)
+    assert result[0].range_available is False, "mmol/L should not be silently converted to mg/dL"
+    print("  PASS: No generic mg/dL ↔ mmol/L conversion")
 
 
 # ============================================================
@@ -26,20 +121,20 @@ def test_known_loinc_glucose():
     assert result[0].reference_low == 70.0
     assert result[0].reference_high == 100.0
     assert result[0].in_range is True
+    assert result[0].range_available is True
     print("  PASS: Known LOINC (Glucose)")
 
 
 def test_known_loinc_hemoglobin():
     """Known LOINC 718-7 (Hemoglobin) — sex-specific ranges, no 'all' entry."""
-    # Hemoglobin 718-7 only has male (13-18) and female (12-16) — no "all" entry
-    # Without sex context, lookup should return range_available=False
     values = [ExtractedLabValue(test_name="Hemoglobin", loinc_code="718-7", value=14.0, unit="g/dL")]
     result = lookup_ranges(values)
     assert len(result) == 1
-    # Since no "all" entry exists, ranges should be 0/0 (not available)
-    assert result[0].reference_low == 0.0
-    assert result[0].reference_high == 0.0
+    # Since no "all" entry exists, ranges should be None (not available)
+    assert result[0].reference_low is None
+    assert result[0].reference_high is None
     assert result[0].in_range is False
+    assert result[0].range_available is False
     print("  PASS: Known LOINC (Hemoglobin) — sex-specific without context")
 
 
@@ -83,9 +178,10 @@ def test_unknown_loinc_cannot_become_normal():
     assert len(result) == 1
     # in_range must be False for unknown LOINC
     assert result[0].in_range is False, "Unknown LOINC must NOT be marked as in_range"
-    # reference ranges should be 0/0 (not available)
-    assert result[0].reference_low == 0.0
-    assert result[0].reference_high == 0.0
+    # reference ranges should be None (not available), NOT 0/0
+    assert result[0].reference_low is None, "Unknown LOINC must not have fake reference_low=0"
+    assert result[0].reference_high is None, "Unknown LOINC must not have fake reference_high=0"
+    assert result[0].range_available is False
     print("  PASS: Unknown LOINC cannot become normal")
 
 
@@ -106,7 +202,6 @@ def test_unknown_loinc_detail():
 
 def test_missing_loinc_in_supported_but_no_range():
     """Supported LOINC with no reference range returns controlled failure."""
-    # RBC count (789-8) has sex-specific ranges — test with no sex context
     from agents.reference_range import RangeLookupInput
     params = RangeLookupInput(
         loinc_code="789-8",
@@ -115,8 +210,7 @@ def test_missing_loinc_in_supported_but_no_range():
         unit="million cells/mcL",
     )
     result = lookup_range_detail(params)
-    # Should have range_available=True because "all" entry exists for 789-8? No — 789-8 only has male/female
-    # Actually checking: 789-8 has male (4.6-6.2) and female (4.2-5.4) — no "all"
+    # 789-8 has male (4.6-6.2) and female (4.2-5.4) — no "all"
     assert result.range_available is False, "RBC count without sex context should not be available"
     assert "Sex-specific" in result.range_note
     print("  PASS: Sex-specific LOINC without context returns controlled failure")
@@ -124,11 +218,10 @@ def test_missing_loinc_in_supported_but_no_range():
 
 def test_unit_mismatch():
     """Unit mismatch returns controlled failure, not a silent comparison."""
-    # Glucose reference is mg/dL — if extracted value is mmol/L, should fail
     values = [ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=5.1, unit="mmol/L")]
     result = lookup_ranges(values)
     assert result[0].in_range is False
-    # The detailed lookup should show unit mismatch
+    assert result[0].range_available is False
     from agents.reference_range import RangeLookupInput
     params = RangeLookupInput(
         loinc_code="2345-7",
@@ -144,12 +237,11 @@ def test_unit_mismatch():
 
 def test_boundary_values_lower():
     """Test exact lower boundary behavior (inclusive)."""
-    # Glucose: 70-100 mg/dL
     values = [
-        ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=69.0, unit="mg/dL"),  # below
-        ExtractedLabValue(test_name="Glucose2", loinc_code="2345-7", value=70.0, unit="mg/dL"),  # exact lower
-        ExtractedLabValue(test_name="Glucose3", loinc_code="2345-7", value=100.0, unit="mg/dL"),  # exact upper
-        ExtractedLabValue(test_name="Glucose4", loinc_code="2345-7", value=101.0, unit="mg/dL"),  # above
+        ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=69.0, unit="mg/dL"),
+        ExtractedLabValue(test_name="Glucose2", loinc_code="2345-7", value=70.0, unit="mg/dL"),
+        ExtractedLabValue(test_name="Glucose3", loinc_code="2345-7", value=100.0, unit="mg/dL"),
+        ExtractedLabValue(test_name="Glucose4", loinc_code="2345-7", value=101.0, unit="mg/dL"),
     ]
     result = lookup_ranges(values)
     assert result[0].in_range is False, "69 should be below range"
@@ -197,7 +289,6 @@ def test_medlineplus_get_citation_no_fabrication():
     """get_citation never fabricates — returns 'no citation available' when needed."""
     citation = get_citation("", "NonexistentLab12345")
     assert "no MedlinePlus citation available" in citation
-    # Should NOT say "MedlinePlus: NonexistentLab12345"
     assert citation == "NonexistentLab12345 — no MedlinePlus citation available"
     print("  PASS: No fabricated citations")
 
@@ -205,10 +296,8 @@ def test_medlineplus_get_citation_no_fabrication():
 def test_medlineplus_get_citation_known_test():
     """get_citation returns something for a known test (may be fallback page)."""
     citation = get_citation("2345-7", "Glucose")
-    # Should contain MedlinePlus or the test name
     assert "Glucose" in citation
-    # Should NOT be fabricated
-    assert citation != "MedlinePlus: Glucose"  # Should have more info than just the name
+    assert citation != "MedlinePlus: Glucose"
     print(f"  PASS: Citation for Glucose: {citation[:80]}...")
 
 
@@ -229,6 +318,17 @@ def test_batch_lookup_multiple_values():
 
 if __name__ == "__main__":
     print("=== Reference Range Tests ===\n")
+    # Unit conversion tests
+    test_wbc_kul_to_cells_mcl()
+    test_wbc_kul_boundary_low()
+    test_wbc_kul_boundary_high()
+    test_wbc_kul_below_range()
+    test_wbc_kul_above_range()
+    test_wbc_10e3_to_cells_mcl()
+    test_conversion_factor_lookup()
+    test_convert_value()
+    test_no_generic_mgdl_to_mmol_conversion()
+    # Reference range tests
     test_known_loinc_glucose()
     test_known_loinc_hemoglobin()
     test_known_loinc_all_common_tests()

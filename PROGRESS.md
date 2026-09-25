@@ -1,7 +1,7 @@
 # Progress Log — Lab Report Explainer Agent
 
 ## Current Status
-Task 1 complete. Production reference data integrated. MedlinePlus Connect integrated. All 31 unit tests pass. Pipeline runs end-to-end with real MedlinePlus citations. Free tier API active and working.
+Task 1 complete + hardened. Production reference data integrated. MedlinePlus Connect integrated. 40 unit tests pass (24 reference range, 6 schema, 10 MedlinePlus). Unit conversion and unavailable-range propagation fixed. E2E pipeline steps 1-4 verified on normal_report.pdf (explanation step rate-limited).
 
 ---
 
@@ -47,6 +47,65 @@ Task 1 complete. Production reference data integrated. MedlinePlus Connect integ
 - "MedlinePlus: Blood Count Tests (https://medlineplus.gov/bloodcounttests.html?...)"
 - "MedlinePlus: Creatinine Test (https://medlineplus.gov/lab-tests/creatinine-test?...)"
 - "MedlinePlus: Cholesterol (https://medlineplus.gov/cholesterol.html?...)"
+
+---
+
+## Task 1 Hardening (2026-09-26)
+
+### Fix 1 — Unit Conversion (numerical, not just textual)
+
+**Problem:** `K/uL` and `cells/mcL` were treated as "compatible" without numerical conversion. `7 K/uL` was compared directly against `4500–11000 cells/mcL`, producing incorrect abnormal results.
+
+**Fix:** Implemented `_get_conversion_factor()` and `_convert_value()` with a deterministic conversion table. Values are now numerically converted BEFORE reference-range comparison.
+
+**Conversions implemented:**
+- `K/uL` → `cells/mcL`: multiply by 1000
+- `10^3/uL` → `cells/mcL`: multiply by 1000
+- `cells/mcL` → `K/uL`: multiply by 0.001
+- `M/uL` ↔ `million cells/mcL`: same scale (factor 1.0)
+- `%` ↔ `percent`: same scale (factor 1.0)
+- `pg/cell` ↔ `pg`: same scale (factor 1.0)
+- `mg/dL` ↔ `mmol/L`: NOT supported (analyte-specific, returns controlled failure)
+
+**Example:** `7 K/uL → 7000 cells/mcL → in_range = true (4500–11000)`
+
+**Safety:** No generic mg/dL ↔ mmol/L conversion. Unit mismatch returns controlled failure.
+
+### Fix 2 — Unavailable Reference Range Propagation
+
+**Problem:** `lookup_ranges()` converted unavailable references to `reference_low=0, reference_high=0`. Downstream agents could interpret `0–0` as a real reference interval and classify values as critically abnormal.
+
+**Fix:**
+- `RangeCheckedValue` schema: `reference_low` and `reference_high` changed from `float` to `Optional[float]` (default `None`)
+- Added `range_available: bool` field to `RangeCheckedValue`
+- `lookup_ranges()` now preserves `None` for unavailable ranges instead of converting to `0.0`
+- Risk flagger guards against unavailable ranges: values with `range_available=False` are NOT sent to the LLM for range-based classification. They get `status="unavailable"` with a descriptive reasoning.
+
+**Three distinguishable states:**
+- Case A (Unknown LOINC): `range_available=False`, note="not in supported labs list"
+- Case B (Known LOINC, no applicable range): `range_available=False`, note="sex-specific ranges available but patient sex not provided"
+- Case C (Known LOINC + valid range): `range_available=True`, normal comparison
+
+### Test Results (post-hardening)
+
+```
+tests/test_reference_range.py 24 passed  (was 15, added 9 unit conversion tests)
+tests/test_schemas.py          6 passed
+tests/test_medlineplus.py     10 passed
+Total: 40 passed in 2.15s
+```
+
+### E2E Results (normal_report.pdf)
+
+```
+[1/5] PDF extraction:      552 chars ✅
+[2/5] Lab extraction:      14 values ✅
+[3/5] Reference lookup:    14 range-checked ✅ (unit conversion working)
+[4/5] Risk classification: 14 classified ✅ (unavailable ranges guarded)
+[5/5] Explanations:        Rate-limited on retry (external constraint)
+```
+
+**Injection defense and self-correction demos not yet tested** — blocked by rate limit on free tier.
 
 ---
 
@@ -151,8 +210,10 @@ The current `reference_ranges.json` uses **MedlinePlus-documented intervals**, n
 ## Next Steps
 
 1. ~~Add $10 credits to OpenRouter~~ — Free tier active and working ✅
-2. Run E2E pipeline on `normal_report.pdf`, `abnormal_report.pdf`, `injection_attack.pdf`
-3. Verify injection defense works
-4. Verify self-correction works
-5. Test Streamlit UI
-6. Run 3-5 Synthea samples for accuracy number
+2. ~~Unit conversion fix~~ — Numerical conversion implemented ✅
+3. ~~Unavailable reference propagation fix~~ — 0-0 eliminated ✅
+4. Run full E2E on `normal_report.pdf`, `abnormal_report.pdf`, `injection_attack.pdf` (needs rate limit to clear or paid tier)
+5. Verify injection defense works
+6. Verify self-correction works
+7. Test Streamlit UI
+8. Run 3-5 Synthea samples for accuracy number

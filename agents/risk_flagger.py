@@ -2,6 +2,10 @@
 
 LLM call #2, grounded by the lookup result.
 Tool defined with input_schema/output_schema per spec.
+
+Safety: Values with no valid reference range are NOT classified from range.
+They are passed through with status="unavailable" so downstream agents
+know the system cannot safely assess them.
 """
 
 import json
@@ -102,28 +106,65 @@ def _extract_json(text: str):
 # --- Async Entry Point ---
 
 async def classify_risk(checked: List[RangeCheckedValue]) -> List[RiskFlaggedValue]:
-    """Classify risk level for each range-checked lab value."""
-    client = get_client()
-    context = json.dumps([c.model_dump() for c in checked], indent=2)
-    combined = f"{SYSTEM_PROMPT}\n\nUSER INPUT:\nClassify these lab values:\n{context}"
+    """Classify risk level for each range-checked lab value.
 
-    result = call_model(
-        client,
-        {
-            "model": OPENROUTER_MODEL,
-            "input": combined,
-            "tools": [risk_classification_tool],
-            "stop_when": step_count_is(2),
-        },
-    )
+    SAFETY: Values with range_available=False are NOT sent to the LLM
+    for range-based classification. They are returned with
+    status="unavailable" and a reasoning explaining why.
+    """
+    # Separate values with available vs unavailable reference ranges
+    classifiable = []
+    unclassifiable = []
 
-    text = await result.get_text()
-    data = _extract_json(text)
+    for c in checked:
+        if c.range_available and c.reference_low is not None and c.reference_high is not None:
+            classifiable.append(c)
+        else:
+            unclassifiable.append(c)
 
-    if isinstance(data, dict):
-        data = data.get("classifications", data.get("values", []))
+    # Pre-populate results for unclassifiable values — NO range-based classification
+    results: List[RiskFlaggedValue] = []
+    for c in unclassifiable:
+        note = c.range_note if hasattr(c, 'range_note') and c.range_note else "No valid reference range available"
+        results.append(RiskFlaggedValue(
+            test_name=c.test_name,
+            loinc_code=c.loinc_code if hasattr(c, 'loinc_code') else "",
+            value=c.value,
+            unit=c.unit,
+            status="unavailable",
+            reasoning=f"Cannot classify: {note}",
+        ))
 
-    output = RiskClassificationOutput(
-        classifications=[RiskFlaggedValue(**item) for item in data]
-    )
-    return output.classifications
+    # Classify values with valid reference ranges via LLM
+    if classifiable:
+        client = get_client()
+        context = json.dumps([c.model_dump() for c in classifiable], indent=2)
+        combined = f"{SYSTEM_PROMPT}\n\nUSER INPUT:\nClassify these lab values:\n{context}"
+
+        result = call_model(
+            client,
+            {
+                "model": OPENROUTER_MODEL,
+                "input": combined,
+                "tools": [risk_classification_tool],
+                "stop_when": step_count_is(2),
+            },
+        )
+
+        text = await result.get_text()
+        data = _extract_json(text)
+
+        if isinstance(data, dict):
+            data = data.get("classifications", data.get("values", []))
+
+        for item in data:
+            # Ensure loinc_code is threaded from input
+            if "loinc_code" not in item or not item["loinc_code"]:
+                # Find matching checked value to get loinc_code
+                for c in classifiable:
+                    if c.test_name == item.get("test_name", ""):
+                        item["loinc_code"] = c.loinc_code
+                        break
+            results.append(RiskFlaggedValue(**item))
+
+    return results

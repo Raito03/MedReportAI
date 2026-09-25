@@ -8,7 +8,7 @@ Tool defined with input_schema/output_schema per spec.
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel
 from openrouter_agent import tool
@@ -83,45 +83,85 @@ def _load_supported_labs() -> dict:
 
 # --- Unit Handling ---
 
-# Unit equivalences — bidirectional mapping for common lab unit variations
-# True = same scale, False = different scale (conversion needed)
-_UNIT_EQUIVALENCES = {
-    # RBC count: "million cells/mcL" ≡ "M/uL" ≡ "million/uL" ≡ "10^6/uL"
-    ("million cells/mcL", "M/uL"): True,
-    ("M/uL", "million cells/mcL"): True,
-    ("million/uL", "M/uL"): True,
-    ("M/uL", "million/uL"): True,
-    ("million cells/µL", "M/uL"): True,
-    ("M/uL", "million cells/µL"): True,
-    ("10^6/uL", "M/uL"): True,
-    ("M/uL", "10^6/uL"): True,
-    # WBC/Platelet: "cells/mcL" ≡ "K/uL" (both thousands)
-    ("cells/mcL", "K/uL"): True,
-    ("K/uL", "cells/mcL"): True,
-    ("cells/µL", "K/uL"): True,
-    ("K/uL", "cells/µL"): True,
-    ("10^3/uL", "K/uL"): True,
-    ("K/uL", "10^3/uL"): True,
-    # Percentage variations
-    ("%", "percent"): True,
-    ("percent", "%"): True,
-    # pg variations
-    ("pg/cell", "pg"): True,
-    ("pg", "pg/cell"): True,
+# Conversion factors: (source_unit, target_unit) -> factor to multiply source value by
+# These are TRUE numerical conversions, not aliases.
+_UNIT_CONVERSIONS = {
+    # WBC: K/uL (thousands) -> cells/mcL (individual)
+    # 7 K/uL = 7000 cells/mcL
+    ("K/uL", "cells/mcL"): 1000.0,
+    ("K/uL", "cells/µL"): 1000.0,
+    ("10^3/uL", "cells/mcL"): 1000.0,
+    ("10^3/uL", "cells/µL"): 1000.0,
+    # Reverse: cells/mcL -> K/uL
+    ("cells/mcL", "K/uL"): 0.001,
+    ("cells/µL", "K/uL"): 0.001,
+    ("cells/mcL", "10^3/uL"): 0.001,
+    ("cells/µL", "10^3/uL"): 0.001,
+    # RBC: M/uL (millions) -> million cells/mcL (same scale, notation alias)
+    # These are numerically equivalent — factor 1.0
+    ("M/uL", "million cells/mcL"): 1.0,
+    ("M/uL", "million cells/µL"): 1.0,
+    ("M/uL", "million/uL"): 1.0,
+    ("M/uL", "10^6/uL"): 1.0,
+    ("million cells/mcL", "M/uL"): 1.0,
+    ("million cells/µL", "M/uL"): 1.0,
+    ("million/uL", "M/uL"): 1.0,
+    ("10^6/uL", "M/uL"): 1.0,
+}
+
+# Pure text aliases (no numerical change, just formatting normalization)
+_UNIT_ALIASES = {
+    "%": "%",
+    "percent": "%",
+    "pg/cell": "pg",
+    "pg": "pg/cell",
 }
 
 
-def _units_compatible(extracted_unit: str, reference_unit: str) -> bool:
-    """Check if extracted unit is compatible with reference unit."""
-    if extracted_unit.lower() == reference_unit.lower():
-        return True
-    key = (extracted_unit.strip(), reference_unit.strip())
-    if key in _UNIT_EQUIVALENCES:
-        return _UNIT_EQUIVALENCES[key]
-    # Fallback: normalize and compare
-    norm_extracted = extracted_unit.lower().replace("µ", "u").replace("×10^3", "K").replace("×10^6", "M")
-    norm_ref = reference_unit.lower().replace("µ", "u").replace("×10^3", "K").replace("×10^6", "M")
-    return norm_extracted == norm_ref
+def _normalize_unit(unit: str) -> str:
+    """Normalize unit string for comparison (lowercase, strip whitespace, unify µ/µ)."""
+    return unit.strip().lower().replace("µ", "u").replace("×10^3", "10^3").replace("×10^6", "10^6")
+
+
+def _get_conversion_factor(source_unit: str, target_unit: str) -> Optional[float]:
+    """Get the numerical conversion factor from source to target unit.
+
+    Returns the factor to multiply source value by, or None if conversion
+    is not supported.
+    """
+    norm_source = _normalize_unit(source_unit)
+    norm_target = _normalize_unit(target_unit)
+
+    # Check exact normalized match (same unit)
+    if norm_source == norm_target:
+        return 1.0
+
+    # Check aliases
+    alias_source = _UNIT_ALIASES.get(norm_source, norm_source)
+    alias_target = _UNIT_ALIASES.get(norm_target, norm_target)
+    if alias_source == alias_target:
+        return 1.0
+
+    # Check conversion factors (try normalized and original forms)
+    for key, factor in _UNIT_CONVERSIONS.items():
+        if _normalize_unit(key[0]) == norm_source and _normalize_unit(key[1]) == norm_target:
+            return factor
+        if key[0] == source_unit and key[1] == target_unit:
+            return factor
+
+    return None
+
+
+def _convert_value(value: float, source_unit: str, target_unit: str) -> Tuple[float, str, bool]:
+    """Convert a value from source unit to target unit.
+
+    Returns (converted_value, canonical_unit, success).
+    If conversion is not supported, returns (original_value, original_unit, False).
+    """
+    factor = _get_conversion_factor(source_unit, target_unit)
+    if factor is None:
+        return value, source_unit, False
+    return value * factor, target_unit, True
 
 
 # --- Core Lookup Logic ---
@@ -134,6 +174,7 @@ def _lookup_single(params: RangeLookupInput) -> RangeCheckedOutput:
     - Known LOINC with sex-specific ranges (requires population context)
     - Unknown LOINC -> controlled failure (NOT defaulting to normal)
     - Unit mismatch -> controlled failure
+    - Unit conversion (e.g. K/uL -> cells/mcL)
     """
     ranges = _load_ranges()
     supported = _load_supported_labs()
@@ -142,7 +183,7 @@ def _lookup_single(params: RangeLookupInput) -> RangeCheckedOutput:
     range_entries = ranges.get(params.loinc_code)
 
     if not range_entries:
-        # LOINC not in reference data at all
+        # Case A: Unknown LOINC
         is_supported = params.loinc_code in supported
         if is_supported:
             note = f"LOINC {params.loinc_code} is recognized but no reference range is available"
@@ -160,20 +201,30 @@ def _lookup_single(params: RangeLookupInput) -> RangeCheckedOutput:
             range_note=note,
         )
 
-    # Check unit compatibility with the first entry's canonical unit
+    # Check unit compatibility and attempt conversion
     canonical_unit = range_entries[0].get("unit", "")
-    if canonical_unit and not _units_compatible(params.unit, canonical_unit):
-        return RangeCheckedOutput(
-            test_name=params.test_name,
-            loinc_code=params.loinc_code,
-            value=params.value,
-            unit=params.unit,
-            reference_low=None,
-            reference_high=None,
-            in_range=False,
-            range_available=False,
-            range_note=f"Unit mismatch: extracted '{params.unit}' vs reference '{canonical_unit}'",
-        )
+    converted_value = params.value
+    used_unit = params.unit
+
+    if canonical_unit:
+        factor = _get_conversion_factor(params.unit, canonical_unit)
+        if factor is None:
+            # Case C: incompatible unit — controlled failure
+            return RangeCheckedOutput(
+                test_name=params.test_name,
+                loinc_code=params.loinc_code,
+                value=params.value,
+                unit=params.unit,
+                reference_low=None,
+                reference_high=None,
+                in_range=False,
+                range_available=False,
+                range_note=f"Unit mismatch: extracted '{params.unit}' vs reference '{canonical_unit}'",
+            )
+        elif factor != 1.0:
+            # Perform numerical conversion
+            converted_value = params.value * factor
+            used_unit = canonical_unit
 
     # Filter by population context
     # If only one entry, use it (unisex range)
@@ -181,12 +232,12 @@ def _lookup_single(params: RangeLookupInput) -> RangeCheckedOutput:
         entry = range_entries[0]
         ref_low = entry["reference_low"]
         ref_high = entry["reference_high"]
-        in_range = ref_low <= params.value <= ref_high
+        in_range = ref_low <= converted_value <= ref_high
         return RangeCheckedOutput(
             test_name=params.test_name,
             loinc_code=params.loinc_code,
-            value=params.value,
-            unit=params.unit,
+            value=converted_value,
+            unit=used_unit,
             reference_low=ref_low,
             reference_high=ref_high,
             in_range=in_range,
@@ -201,12 +252,12 @@ def _lookup_single(params: RangeLookupInput) -> RangeCheckedOutput:
         entry = all_entries[0]
         ref_low = entry["reference_low"]
         ref_high = entry["reference_high"]
-        in_range = ref_low <= params.value <= ref_high
+        in_range = ref_low <= converted_value <= ref_high
         return RangeCheckedOutput(
             test_name=params.test_name,
             loinc_code=params.loinc_code,
-            value=params.value,
-            unit=params.unit,
+            value=converted_value,
+            unit=used_unit,
             reference_low=ref_low,
             reference_high=ref_high,
             in_range=in_range,
@@ -214,14 +265,14 @@ def _lookup_single(params: RangeLookupInput) -> RangeCheckedOutput:
             range_note="",
         )
 
-    # Sex-specific ranges exist but no population context provided
+    # Case B: Sex-specific ranges exist but no population context provided
     # Return a controlled "insufficient context" result — do NOT guess
     sex_options = [e.get("population", {}).get("sex", "unknown") for e in range_entries]
     return RangeCheckedOutput(
         test_name=params.test_name,
         loinc_code=params.loinc_code,
-        value=params.value,
-        unit=params.unit,
+        value=converted_value,
+        unit=used_unit,
         reference_low=None,
         reference_high=None,
         in_range=False,
@@ -253,7 +304,12 @@ range_lookup_tool = tool(
 # --- Batch Lookup (used by orchestrator directly) ---
 
 def lookup_ranges(values: List[ExtractedLabValue]) -> List[RangeCheckedValue]:
-    """Batch lookup — called by orchestrator for direct (non-LLM) calls."""
+    """Batch lookup — called by orchestrator for direct (non-LLM) calls.
+
+    IMPORTANT: Preserves the unavailable-reference state (None for ref_low/ref_high)
+    instead of converting to 0.0. Downstream agents must check range_available
+    before interpreting reference_low/reference_high.
+    """
     params = BatchRangeLookupInput(
         values=[
             RangeLookupInput(
@@ -272,9 +328,10 @@ def lookup_ranges(values: List[ExtractedLabValue]) -> List[RangeCheckedValue]:
             loinc_code=r.loinc_code,
             value=r.value,
             unit=r.unit,
-            reference_low=r.reference_low if r.range_available else 0.0,
-            reference_high=r.reference_high if r.range_available else 0.0,
+            reference_low=r.reference_low,
+            reference_high=r.reference_high,
             in_range=r.in_range,
+            range_available=r.range_available,
         )
         for r in output.results
     ]

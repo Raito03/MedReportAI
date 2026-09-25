@@ -1,7 +1,7 @@
 """Pydantic models — Section 5 of PROJECT.md. All agent I/O conforms to these."""
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class ExtractedLabValue(BaseModel):
@@ -18,9 +18,10 @@ class RangeCheckedValue(BaseModel):
     loinc_code: str
     value: float
     unit: str
-    reference_low: float
-    reference_high: float
-    in_range: bool
+    reference_low: Optional[float] = None
+    reference_high: Optional[float] = None
+    in_range: bool = False
+    range_available: bool = False
 
 
 class RiskFlaggedValue(BaseModel):
