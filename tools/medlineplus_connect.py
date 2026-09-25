@@ -148,9 +148,37 @@ def fetch_medlineplus_info(loinc_code: str, timeout: int = REQUEST_TIMEOUT) -> M
         if entries:
             # Take the first relevant entry
             entry = entries[0] if isinstance(entries, list) else entries
-            title = entry.get("title", {}).get("_value", "") if isinstance(entry.get("title"), dict) else entry.get("title", "")
-            link = entry.get("link", {}).get("@href", "") if isinstance(entry.get("link"), dict) else entry.get("link", "")
-            summary = entry.get("summary", {}).get("_value", "") if isinstance(entry.get("summary"), dict) else entry.get("summary", "")
+
+            # Extract title — handle dict with _value, string, or other
+            raw_title = entry.get("title", "")
+            if isinstance(raw_title, dict):
+                title = raw_title.get("_value", "")
+            elif isinstance(raw_title, str):
+                title = raw_title
+            else:
+                title = str(raw_title) if raw_title else ""
+
+            # Extract link — handle dict with @href, list of dicts, or string
+            raw_link = entry.get("link", "")
+            if isinstance(raw_link, dict):
+                link = raw_link.get("@href", "")
+            elif isinstance(raw_link, list) and raw_link:
+                # List of link dicts — take first one with href
+                first = raw_link[0]
+                link = first.get("href", first.get("@href", "")) if isinstance(first, dict) else str(first)
+            elif isinstance(raw_link, str):
+                link = raw_link
+            else:
+                link = ""
+
+            # Extract summary — handle dict with _value, string, or other
+            raw_summary = entry.get("summary", "")
+            if isinstance(raw_summary, dict):
+                summary = raw_summary.get("_value", "")
+            elif isinstance(raw_summary, str):
+                summary = raw_summary
+            else:
+                summary = str(raw_summary) if raw_summary else ""
 
             if title or link:
                 return MedlinePlusResult(

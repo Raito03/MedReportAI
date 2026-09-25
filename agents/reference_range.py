@@ -83,23 +83,31 @@ def _load_supported_labs() -> dict:
 
 # --- Unit Handling ---
 
-# Simple unit equivalences for common lab units
+# Unit equivalences — bidirectional mapping for common lab unit variations
+# True = same scale, False = different scale (conversion needed)
 _UNIT_EQUIVALENCES = {
-    # RBC count variations
+    # RBC count: "million cells/mcL" ≡ "M/uL" ≡ "million/uL" ≡ "10^6/uL"
     ("million cells/mcL", "M/uL"): True,
     ("M/uL", "million cells/mcL"): True,
     ("million/uL", "M/uL"): True,
     ("M/uL", "million/uL"): True,
     ("million cells/µL", "M/uL"): True,
     ("M/uL", "million cells/µL"): True,
-    # WBC count variations
-    ("cells/mcL", "K/uL"): False,  # different scale (thousands vs individual)
-    ("K/uL", "cells/mcL"): False,
-    # Platelet variations
-    ("cells/mcL", "K/uL"): False,
+    ("10^6/uL", "M/uL"): True,
+    ("M/uL", "10^6/uL"): True,
+    # WBC/Platelet: "cells/mcL" ≡ "K/uL" (both thousands)
+    ("cells/mcL", "K/uL"): True,
+    ("K/uL", "cells/mcL"): True,
+    ("cells/µL", "K/uL"): True,
+    ("K/uL", "cells/µL"): True,
+    ("10^3/uL", "K/uL"): True,
+    ("K/uL", "10^3/uL"): True,
     # Percentage variations
     ("%", "percent"): True,
     ("percent", "%"): True,
+    # pg variations
+    ("pg/cell", "pg"): True,
+    ("pg", "pg/cell"): True,
 }
 
 

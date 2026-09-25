@@ -51,11 +51,14 @@ risk_classification_tool = tool(
 # --- Prompt ---
 
 SYSTEM_PROMPT = """\
-You are a clinical risk classification engine. Given lab values with their \
-reference ranges, classify each as:
-- "normal": value is within reference range
-- "mildly_abnormal": value is slightly outside range (within 20% of boundary)
-- "critical": value is far outside range (more than 20% beyond boundary)
+You are a clinical risk classification engine. You receive lab values WITH their reference ranges already looked up.
+
+For EACH value, compare the "value" field against "reference_low" and "reference_high":
+- If reference_low <= value <= reference_high: status = "normal"
+- If value is slightly outside (within 20% of boundary): status = "mildly_abnormal"
+- If value is far outside (more than 20% beyond boundary): status = "critical"
+
+Example: Glucose value=92, reference_low=70, reference_high=100 → 92 is BETWEEN 70 and 100 → status="normal"
 
 Return ONLY a JSON array. No markdown fences, no explanation, just the JSON.
 
@@ -68,7 +71,8 @@ For each value, use these exact keys:
 - reasoning: one sentence explaining the classification
 
 IMPORTANT: Do NOT diagnose. Only classify deviation from range.
-IMPORTANT: Always include loinc_code exactly as provided in the input."""
+IMPORTANT: Always include loinc_code exactly as provided in the input.
+IMPORTANT: Read the reference_low and reference_high carefully. If the value is between them, it IS normal."""
 
 
 def _extract_json(text: str):
