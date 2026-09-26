@@ -3,7 +3,7 @@
 ## Current Status
 Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Literal`). 43 unit tests pass (24 reference range, 9 schema, 10 MedlinePlus). Unit conversion, unavailable-range propagation, and risk flagger guard all verified. E2E non-LLM path verified end-to-end.
 
-**P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 103 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
+**P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 104 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
 
 ---
 
@@ -264,7 +264,7 @@ $ python tests/test_pdf_extraction.py          # __main__ entry point
 
 $ python -m pytest tests/ -v                   # merged suite after rebase onto origin/master
                                               # (P0-T1 + P0-T2 + P0-T4 + P0-T3 + MedlinePlus)
-103 passed, 2 skipped, 2 warnings in 4.58s   (EXIT=0)
+104 passed, 2 skipped, 2 warnings in 5.18s   (EXIT=0)
 ```
 
 CLI controlled-failure checks (clear message + exit code 1, no traceback):
@@ -291,7 +291,7 @@ Text extraction without OCR is unsupported (OCR is out of scope): ...
 2. **`python tests/test_schemas.py` / `test_reference_range.py` as standalone scripts** fail
    with `ModuleNotFoundError: No module named 'core'/'agents'` — **pre-existing**: those
    files have no `sys.path` bootstrap (unlike `test_llm_client.py`) and are run via pytest,
-   where they pass (included in the 103 above). Not modified (locked P0-T1/T2 files).
+   where they pass (included in the 104 above). Not modified (locked P0-T1/T2 files).
 
 ### Environment notes (this machine only — no repo changes)
 

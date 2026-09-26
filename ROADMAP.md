@@ -86,29 +86,41 @@ Make the pipeline's foundations deterministic, safe, testable, and ready for Pha
 
 ## P0-T3 — PDF Extraction Robustness
 
+**Status: DONE**
+
+**Commit:** `68f5b85`
+
 **Owner:** PDF / Extraction
 
 **Subtasks:**
 
-* Audit current `pdfplumber` extraction path
-* Test normal single-page PDF
-* Test multi-page PDF
-* Test table-heavy PDF
-* Test unusual whitespace/alignment
-* Test blank PDF
-* Test malformed/corrupt PDF
-* Test image-only/scanned PDF
-* Detect no-text/image-only PDFs and return controlled failure
-* Do NOT add OCR unless project scope is explicitly changed
-* Preserve PDF content as untrusted data
-* Add extraction regression fixtures/tests
-* Measure extraction against controlled synthetic ground truth where available
+* [x] Audit current `pdfplumber` extraction path
+* [x] Test normal single-page PDF
+* [x] Test multi-page PDF
+* [x] Test table-heavy PDF
+* [x] Test unusual whitespace/alignment
+* [x] Test blank PDF
+* [x] Test malformed/corrupt PDF
+* [x] Test image-only/scanned PDF
+* [x] Detect no-text/image-only PDFs and return controlled failure
+* [x] Do NOT add OCR unless project scope is explicitly changed
+* [x] Preserve PDF content as untrusted data
+* [x] Add extraction regression fixtures/tests
+* [x] Measure extraction against controlled synthetic ground truth where available
 
 **Parallel:** Yes, can start immediately.
 
 **Exit criterion:**
 
 > Supported machine-readable PDFs extract reliably; unsupported PDFs fail safely and clearly.
+
+**Completion notes (2026-09-26):**
+
+* `tools/pdf_extractor.py`: `ValueError`-based controlled failure hierarchy — `PdfExtractionError` → `PdfInvalidError` (corrupt/truncated/empty/not-a-PDF) and `PdfNoTextError(reason="blank" | "image_only")`; `pdf_to_text(file_path) -> str` signature and success behavior unchanged; existing callers and orchestrator safety net untouched
+* Image-only/scanned PDFs report an explicit "unsupported (OCR is out of scope)" failure — no OCR introduced (guarded by `test_extractor_contains_no_ocr_dependencies`)
+* `tests/test_pdf_extraction.py`: 12 deterministic, offline tests covering all seven required PDF categories; all fixtures generated programmatically at test time (reportlab, a minimal stdlib-built image-only PDF, deterministic corrupt/truncated/empty bytes) — no binary fixtures, no API key, no network
+* `ui/cli.py` / `ui/app.py`: controlled extraction-error messages instead of tracebacks
+* Merged deterministic suite after integration: **104 passed, 2 skipped** (the 2 skips are the pre-existing `test_llm_client.py` async OpenRouter integration tests — P0-T5)
 
 ---
 
@@ -451,7 +463,7 @@ Do not make the tech lead a permanent single-task bottleneck.
 Run these in parallel:
 
 * [x] P0-T2 — Reference-Range Safety Consumer Audit (`25d85bf`, `dea0a93`)
-* [ ] P0-T3
+* [x] P0-T3 — PDF Extraction Robustness (`68f5b85`)
 * [x] P0-T4 — Agent Seam / Schema Integration Tests (`96f7820`, `f108175`)
 * [ ] P0-T5
 * [ ] P0-T6
