@@ -8,7 +8,7 @@ Uses MedlinePlus Connect for real citations (not fabricated).
 
 import json
 import re
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 from openrouter_agent import call_model, step_count_is, tool
@@ -77,6 +77,26 @@ CRITICAL: Never state or imply a diagnosis. Always use the citation provided. \
 If no citation is available in the input, do not fabricate one."""
 
 
+# --- P1-T2 bounded self-correction -----------------------------------------
+# Appended to the prompt ONLY when the verifier has rejected the previous
+# draft and the orchestrator is retrying (bounded by MAX_RETRIES). The
+# verifier's issues are passed through verbatim; the rules below restate —
+# never relax — the safety constraints, so a correction cannot weaken
+# verification, drop citation requirements, change lab values, or alter a
+# risk classification just to make verification pass.
+CORRECTION_PROMPT_TEMPLATE = """\
+CORRECTION REQUESTED — the safety verifier REJECTED your previous draft.
+It found these issues:
+{issues}
+
+Fix every issue listed above. These rules do NOT change:
+- Never state or imply a diagnosis (no "you have ..." claims).
+- Do not change any test_name, value, unit, or risk classification.
+- Use ONLY the citations provided in the input — never invent or modify one.
+- Keep the same JSON array output format.
+If a citation_status is "unavailable", repeat the provided no-citation text as-is."""
+
+
 
 def _extract_json(text: str):
     """Robustly extract JSON from LLM response."""
@@ -104,10 +124,19 @@ def _extract_json(text: str):
 
 # --- Async Entry Point ---
 
-async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation]:
+async def explain(
+    risk_flagged: List[RiskFlaggedValue],
+    correction_issues: Optional[List[str]] = None,
+) -> List[FinalExplanation]:
     """Generate plain-language explanations for each risk-flagged value.
 
     Each explanation gets a real MedlinePlus citation (not fabricated).
+
+    P1-T2 self-correction: when ``correction_issues`` (the verifier's
+    ``issues_found`` from a rejected draft) is provided, those issues are
+    injected verbatim into the prompt as a bounded correction request.
+    Without it the prompt is byte-identical to the initial-generation prompt.
+    Citation grounding, post-processing, and all safety rules are unchanged.
     """
     # P0-T4 seam guard: empty input short-circuits — never call the LLM with
     # zero values (a model asked to explain nothing could invent results for
@@ -139,6 +168,12 @@ async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation
 
     context = json.dumps(enriched, indent=2)
     combined = f"{SYSTEM_PROMPT}\n\nUSER INPUT:\nExplain these lab results:\n{context}"
+    if correction_issues:
+        # P1-T2: the verifier's findings drive this regeneration. Issues are
+        # passed verbatim; only the prompt gains a correction section — the
+        # risk data above and the trusted citation map stay exactly as-is.
+        issues_text = "\n".join(f"- {issue}" for issue in correction_issues)
+        combined += "\n\n" + CORRECTION_PROMPT_TEMPLATE.format(issues=issues_text)
 
     result = call_model(
         client,

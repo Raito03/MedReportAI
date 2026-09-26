@@ -5,6 +5,7 @@ Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Li
 
 **P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 104 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
 **P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 158 passed / 4 skipped (all skips are gated external tests: 3 OpenRouter per P0-T5 + 1 gated live MedlinePlus); live MedlinePlus test PASSED. See the "P0-T6" section below.
+**P1-T2 (Verifier Self-Correction) completed 2026-09-26** - bounded self-correction loop: the verifier's `issues_found` are now injected verbatim into the correction prompt and the corrected output is re-verified; 5 deterministic E2E tests (success, persistent failure, retry-limit bounds, safety invariants); full suite 173 passed / 4 skipped (same gated external skips as before). See the "P1-T2" section below.
 
 ---
 
@@ -420,6 +421,80 @@ Phase 0 Status: **COMPLETE / LOCKED**
 P0-T1 through P0-T7 have been implemented and verified. The Phase 0 foundation is now locked for Phase 1 demo/evaluation work.
 
 Future changes should not modify the locked reference-range safety contract or Phase 0 architecture unless a regression or explicitly approved scope change requires it.
+
+---
+
+## P1-T2 — Verifier Self-Correction
+
+**Status: DONE**
+
+**Completed:** 2026-09-26
+
+### What was implemented
+
+The orchestrator already had a bounded retry loop, but the retry regenerated explanations with an **identical prompt** — the verifier's `issues_found` never reached the explainer (the docstring's "issues injected" claim was not true). P1-T2 closes that gap without touching the verifier or the sequential architecture:
+
+| File | Change |
+|------|--------|
+| `agents/explainer.py` | `explain(risk_flagged, correction_issues=None)` — when the orchestrator passes the verifier's `issues_found`, a `CORRECTION_PROMPT_TEMPLATE` section is appended to the prompt with the issues **verbatim**. Without it, the prompt is byte-identical to the original (zero regression for existing callers/tests). Trusted-citation grounding and post-processing unchanged. |
+| `pipeline/orchestrator.py` | On verifier failure, `verification.issues_found` is passed into the next `explain()` call; new `[CORRECT]` log line; module/function comments corrected. Loop bound `MAX_RETRIES = 1` and the result-dict shape unchanged. |
+| `tests/test_p1_t2_self_correction.py` | **New** — 5 deterministic tests (below). |
+| `PROGRESS.md` | This section. |
+
+**Not changed:** `agents/verifier.py` (remains authoritative), `core/schemas.py`, `agents/reference_range.py`, `agents/risk_flagger.py`, `agents/extraction.py`, reference data, Phase 0 contracts. No new agents/framework; no LangChain/LangGraph/RAG/OCR/vector DB.
+
+### How self-correction works
+
+```text
+generate explanation → verify → PASS → return
+                         ↓ FAIL
+     issues_found injected verbatim into correction prompt
+                         ↓
+        regenerate (bounded) → verify → PASS → return
+                         ↓ FAIL (limit reached)
+        controlled failure: verified=False + issues (never accepted)
+```
+
+### Retry / attempt limit
+
+* `MAX_RETRIES = 1` → **1 correction attempt**, `MAX_RETRIES + 1 = 2` generation attempts total.
+* The bound is asserted in tests at 0, 1 (shipped), and 2 — the loop can never run unbounded (FakeLLM additionally raises if an extra call occurs).
+
+### Deterministic tests added
+
+`tests/test_p1_t2_self_correction.py` — **5 tests**, FakeLLM + canned MedlinePlus `urlopen` boundary, real `pipeline.orchestrator.run_pipeline` on the existing synthetic `data/samples/normal_report.pdf` (no OpenRouter, no network, no real patient data). The verifier's LLM is programmed to say "pass" in every scenario, so rejection/acceptance is driven by the deterministic code check:
+
+1. `test_correction_success_path_end_to_end` — first explanation invalid (diagnostic language matches `\byou have\b`) → verifier rejects → issues injected into the correction prompt → corrected explanation generated → verifier accepts → final result contains the corrected explanation (`verified=True`, trusted citation, no rogue citation leak).
+2. `test_persistent_verifier_failure_is_controlled` — first fails, correction also fails → exactly `MAX_RETRIES + 1` attempts → `verified=False` + issues; the invalid explanation is surfaced only as explicitly unverified output, never silently accepted.
+3. `test_retry_limit_respected_for_raised_bound` — `MAX_RETRIES=2` → exactly 3 attempts, then stops (an extra attempt would trip FakeLLM).
+4. `test_retry_limit_zero_makes_single_attempt` — `MAX_RETRIES=0` → single attempt, no correction prompt, controlled failure.
+5. `test_correction_prompt_restates_rules_and_preserves_data` — correction prompt restates (never relaxes) the safety rules; the risk payload handed to the verifier is identical before/after correction; lab values/statuses unchanged.
+
+### Test results
+
+```text
+Before: .venv\Scripts\python.exe -m pytest -q   → 168 passed, 4 skipped (exit 0)
+After:  .venv\Scripts\python.exe -m pytest -q   → 173 passed, 4 skipped (exit 0)
+New:    .venv\Scripts\python.exe -m pytest tests/test_p1_t2_self_correction.py -v
+                                                → 5 passed (exit 0)
+```
+
+The 4 skips are the pre-existing gated external tests (3 OpenRouter integration + 1 live MedlinePlus) — unchanged. No locked P0 test was modified; no existing test failed.
+
+### Safety properties preserved
+
+* Verifier untouched — still authoritative; no rule weakened, removed, or bypassed.
+* Failed explanations are never auto-accepted; exhaustion returns `verified=False` with the issues.
+* Citations still come only from the trusted MedlinePlus lookup (P0-T6 override still applies); a correction cannot invent or modify one.
+* Lab values, test identity, and reference-range validation are unchanged; risk classifications are never flipped to force a pass (asserted).
+* Full pipeline verified end-to-end on synthetic data for both the corrected-success and persistent-failure paths (orchestrator log shows `[CORRECT] Regenerating with 1 verifier issue(s) injected...` then `[PASS]` / `Verifier FAILED after 2 attempts`).
+
+### Known limitations
+
+* One correction attempt by design (`MAX_RETRIES = 1`); a model that produces invalid output twice returns controlled failure.
+* Correction regenerates the whole explanation set, not only the affected entry — deliberately kept simple for the demo.
+* Coverage is deterministic (LLM mocked); live-OpenRouter behavior of the correction prompt is exercised only by the separately gated integration tests.
+* Known Issue #1 still applies: `openrouter-agent-sdk` 0.8.0 needs the site-packages `OutputImage` patch (re-applied to the local `.venv`; lost on reinstall).
 
 ---
 
