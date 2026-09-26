@@ -161,22 +161,45 @@ async def classify_risk(checked: List[RangeCheckedValue]) -> List[RiskFlaggedVal
         if isinstance(data, dict):
             data = data.get("classifications", data.get("values", []))
 
-        # SAFETY (P0-T2): only values that were actually sent for range-based
-        # classification may receive an LLM-assigned status. Any item the model
-        # invents for an unavailable-range value (or an unknown test) is dropped
-        # so range_available=False can never become normal/mildly_abnormal/critical.
-        classifiable_names = {c.test_name for c in classifiable}
+        # SAFETY (P0-T2): an LLM classification is only accepted if it matches
+        # the EXACT lab value that was actually sent for range-based
+        # classification — identified by (test_name, loinc_code, value, unit).
+        # test_name alone is NOT unique (duplicate test names are possible), so
+        # it must never be sufficient to prove identity. This ensures an
+        # unavailable-range value can never inherit an LLM classification and
+        # range_available=False can never become normal/mildly_abnormal/critical.
+        classifiable_keys = {
+            (c.test_name, c.loinc_code, c.value, c.unit)
+            for c in classifiable
+        }
 
         for item in data:
-            if not isinstance(item, dict) or item.get("test_name", "") not in classifiable_names:
+            if not isinstance(item, dict):
                 continue
-            # Ensure loinc_code is threaded from input
-            if "loinc_code" not in item or not item["loinc_code"]:
-                # Find matching checked value to get loinc_code
-                for c in classifiable:
-                    if c.test_name == item.get("test_name", ""):
-                        item["loinc_code"] = c.loinc_code
-                        break
+
+            # LOINC must be present and exact — never infer it from test_name.
+            # (The system prompt requires the model to echo loinc_code exactly;
+            # a missing LOINC means we cannot prove which value this is.)
+            loinc_code = item.get("loinc_code")
+            if not loinc_code:
+                continue
+
+            # Normalize the numeric value to match the float schema type;
+            # reject items whose value is missing or non-numeric.
+            try:
+                item_value = float(item["value"])
+            except (KeyError, TypeError, ValueError):
+                continue
+
+            item_key = (
+                item.get("test_name", ""),
+                loinc_code,
+                item_value,
+                item.get("unit", ""),
+            )
+            if item_key not in classifiable_keys:
+                continue
+
             results.append(RiskFlaggedValue(**item))
 
     return results

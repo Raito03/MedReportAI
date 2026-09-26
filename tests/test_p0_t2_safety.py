@@ -218,7 +218,7 @@ def test_unavailable_value_not_sent_to_range_based_llm():
     assert checked[1].range_available is False  # unit mismatch
 
     llm_items = [{
-        "test_name": "Glucose", "value": 92.0, "unit": "mg/dL",
+        "test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0, "unit": "mg/dL",
         "status": "normal", "reasoning": "92 is between 70 and 100",
     }]
     results, llm_mock = _run_classify(checked, llm_items=llm_items)
@@ -246,12 +246,14 @@ def test_rogue_llm_status_for_unavailable_value_is_dropped():
     checked = lookup_ranges(values)
 
     llm_items = [
-        {"test_name": "Glucose", "value": 92.0, "unit": "mg/dL",
+        {"test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0, "unit": "mg/dL",
          "status": "normal", "reasoning": "in range"},
-        # Rogue outputs that must be dropped:
-        {"test_name": "MysteryMismatch", "value": 5.1, "unit": "mmol/L",
+        # Rogue outputs that must be dropped — even with a loinc_code present,
+        # the full identity (test_name, loinc_code, value, unit) must match a
+        # value that was actually sent to the LLM:
+        {"test_name": "MysteryMismatch", "loinc_code": "2345-7", "value": 5.1, "unit": "mmol/L",
          "status": "critical", "reasoning": "rogue classification"},
-        {"test_name": "NotInBatch", "value": 1.0, "unit": "U",
+        {"test_name": "NotInBatch", "loinc_code": "99999-9", "value": 1.0, "unit": "U",
          "status": "normal", "reasoning": "rogue classification"},
     ]
     results, _ = _run_classify(checked, llm_items=llm_items)
@@ -280,6 +282,87 @@ def test_malformed_range_states_cannot_be_classified():
     assert by_name["ForgedTrue"].status == "unavailable"   # True + None refs -> unavailable
     assert by_name["ForgedZero"].status == "unavailable"   # False + 0-0 -> unavailable, never critical
     print("  PASS: malformed range states (True+None, False+0-0) stay unavailable")
+
+
+# ============================================================
+# Identity matching — duplicate test names / LOINC validation
+# ============================================================
+
+def test_duplicate_test_name_unavailable_never_classified():
+    """Duplicate test_name: the unavailable twin must never inherit an LLM status.
+
+    test_name alone does not uniquely identify a lab value, so a classification
+    is only accepted on exact (test_name, loinc_code, value, unit) identity.
+    """
+    values = [
+        ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=92.0, unit="mg/dL"),
+        ExtractedLabValue(test_name="Glucose", loinc_code="99999-9", value=5.1, unit="mmol/L"),
+    ]
+    checked = lookup_ranges(values)
+    assert checked[0].test_name == checked[1].test_name == "Glucose"
+    assert checked[0].range_available is True
+    assert checked[1].range_available is False, "unknown LOINC must be unavailable"
+    assert checked[1].reference_low is None and checked[1].reference_high is None
+
+    llm_items = [
+        # Valid classification for the available glucose:
+        {"test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0, "unit": "mg/dL",
+         "status": "normal", "reasoning": "92 is between 70 and 100"},
+        # Rogue classification targeting the unavailable twin (same test_name):
+        {"test_name": "Glucose", "loinc_code": "99999-9", "value": 5.1, "unit": "mmol/L",
+         "status": "critical", "reasoning": "rogue classification"},
+    ]
+    results, llm_mock = _run_classify(checked, llm_items=llm_items)
+    llm_mock.assert_called_once()
+
+    # Only the available value was sent to the LLM:
+    prompt = llm_mock.call_args[0][1]["input"]
+    assert prompt.count('"range_available"') == 1
+    assert '"value": 5.1' not in prompt, "the unavailable twin must not be sent to the LLM"
+
+    by_loinc = {r.loinc_code: r for r in results}
+    assert by_loinc["2345-7"].status == "normal", "valid exact-identity output must be accepted"
+    assert by_loinc["99999-9"].status == "unavailable", \
+        "same test_name must NOT let the unavailable twin inherit the LLM classification"
+    assert by_loinc["99999-9"].status not in ("normal", "mildly_abnormal", "critical")
+    print("  PASS: duplicate test_name — unavailable twin never inherits LLM classification")
+
+
+def test_wrong_loinc_classification_rejected():
+    """Correct test_name + value + unit but WRONG loinc_code must be rejected."""
+    values = [ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=92.0, unit="mg/dL")]
+    checked = lookup_ranges(values)
+    assert checked[0].range_available is True
+
+    llm_items = [{
+        "test_name": "Glucose", "loinc_code": "WRONG-LOINC", "value": 92.0, "unit": "mg/dL",
+        "status": "critical", "reasoning": "wrong identity",
+    }]
+    results, _ = _run_classify(checked, llm_items=llm_items)
+    # The mismatched identity must NOT become a RiskFlaggedValue:
+    assert results == [], "classification with wrong loinc_code must be rejected"
+    print("  PASS: wrong loinc_code classification rejected")
+
+
+def test_missing_loinc_classification_rejected():
+    """Correct test_name + value + unit but MISSING loinc_code must be rejected.
+
+    The LOINC is part of the lab result's identity and the system prompt
+    requires the model to echo it exactly — it must never be inferred
+    from test_name.
+    """
+    values = [ExtractedLabValue(test_name="Glucose", loinc_code="2345-7", value=92.0, unit="mg/dL")]
+    checked = lookup_ranges(values)
+    assert checked[0].range_available is True
+
+    llm_items = [{
+        "test_name": "Glucose", "value": 92.0, "unit": "mg/dL",
+        "status": "normal", "reasoning": "no loinc provided",
+    }]
+    results, _ = _run_classify(checked, llm_items=llm_items)
+    assert results == [], \
+        "classification without loinc_code must be rejected, never guessed from test_name"
+    print("  PASS: missing loinc_code classification rejected (no test_name inference)")
 
 
 # ============================================================
@@ -376,7 +459,7 @@ def test_reference_provenance_survives_pipeline():
     assert "not in the supported labs list" in notes["Mystery"]
 
     llm_items = [{
-        "test_name": "Glucose", "value": 92.0, "unit": "mg/dL",
+        "test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0, "unit": "mg/dL",
         "status": "normal", "reasoning": "between 70 and 100",
     }]
     results, _ = _run_classify(checked, llm_items=llm_items)
@@ -409,7 +492,7 @@ def test_valid_reference_range_still_classified_normally():
     assert c.in_range is True
 
     llm_items = [{
-        "test_name": "Glucose", "value": 92.0, "unit": "mg/dL",
+        "test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0, "unit": "mg/dL",
         "status": "normal", "reasoning": "92 is between 70 and 100",
     }]
     results, llm_mock = _run_classify(checked, llm_items=llm_items)
@@ -419,7 +502,7 @@ def test_valid_reference_range_still_classified_normally():
     assert '"reference_high": 100.0' in prompt
     r = results[0]
     assert r.status == "normal"
-    assert r.loinc_code == "2345-7", "loinc_code must be threaded from input when LLM omits it"
+    assert r.loinc_code == "2345-7", "exact-identity LLM output (correct loinc_code) must be accepted"
     print("  PASS: valid reference range still classified normally")
 
 
@@ -436,7 +519,7 @@ def test_valid_unit_conversion_still_classified():
     assert c.reference_high == 11000.0
 
     llm_items = [{
-        "test_name": "WBC count", "value": 7000.0, "unit": "cells/mcL",
+        "test_name": "WBC count", "loinc_code": "6690-2", "value": 7000.0, "unit": "cells/mcL",
         "status": "normal", "reasoning": "7000 is between 4500 and 11000",
     }]
     results, _ = _run_classify(checked, llm_items=llm_items)
@@ -487,6 +570,9 @@ if __name__ == "__main__":
     test_unavailable_value_not_sent_to_range_based_llm()
     test_rogue_llm_status_for_unavailable_value_is_dropped()
     test_malformed_range_states_cannot_be_classified()
+    test_duplicate_test_name_unavailable_never_classified()
+    test_wrong_loinc_classification_rejected()
+    test_missing_loinc_classification_rejected()
     test_unavailable_survives_orchestrator()
     test_reference_provenance_survives_pipeline()
     test_valid_reference_range_still_classified_normally()
