@@ -4,7 +4,7 @@
 Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Literal`). 43 unit tests pass (24 reference range, 9 schema, 10 MedlinePlus). Unit conversion, unavailable-range propagation, and risk flagger guard all verified. E2E non-LLM path verified end-to-end.
 
 **P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 104 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
-**P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 119 passed / 3 skipped (2 OpenRouter async + 1 gated live test); live MedlinePlus test PASSED. See the "P0-T6" section below.
+**P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 158 passed / 4 skipped (all skips are gated external tests: 3 OpenRouter per P0-T5 + 1 gated live MedlinePlus); live MedlinePlus test PASSED. See the "P0-T6" section below.
 
 ---
 
@@ -340,18 +340,19 @@ Text extraction without OCR is unsupported (OCR is out of scope): ...
 
 ### Tests added
 
-* `tests/test_p0_t6_citation_grounding.py` — **15 deterministic tests**; every HTTP call mocked at `urllib.request.urlopen`, every LLM mocked at `call_model`. Covers the 12 required cases: success (list + feed shapes), multiple records, empty response, malformed responses, untrusted URL, timeout, network error, unexpected exception, unknown LOINC, citation propagation (input AND output), no-citation propagation, citation isolation (Glucose `2345-7` vs WBC `6690-2`, LLM citations deliberately swapped), plus URL trust-policy unit checks, an LLM-invented-test_name check, a `lookup → risk → explain` integration flow, and a full mocked orchestrator E2E (PDF → verify) asserting the serialized output carries only the validated citation.
+* `tests/test_p0_t6_citation_grounding.py` — **16 deterministic tests**; every HTTP call mocked at `urllib.request.urlopen`, every LLM mocked at `call_model`. Covers the 12 required cases: success (list + feed shapes), multiple records, empty response, malformed responses, untrusted URL, timeout, network error, unexpected exception, unknown LOINC, citation propagation (input AND output), no-citation propagation, citation isolation (Glucose `2345-7` vs WBC `6690-2`, LLM citations deliberately swapped), plus URL trust-policy unit checks, an LLM-invented-test_name check, a data-driven controlled-citation check across **all 27 mapped LOINC codes**, a `lookup → risk → explain` integration flow, and a full mocked orchestrator E2E (PDF → verify) asserting the serialized output carries only the validated citation.
 * `tests/test_medlineplus_live.py` — live test for known LOINC `2345-7`, gated behind `MEDLINEPLUS_LIVE=1` (skipped by default so the normal suite never depends on live MedlinePlus); unreachable service reports as blocked via skip, never as passed.
 
 ### Exact test results
 
 ```text
 $ python -m pytest tests/test_p0_t6_citation_grounding.py -v
-15 passed in 3.18s
+16 passed in 3.01s
 
-$ python -m pytest tests/ -q                    # full deterministic suite
-119 passed, 3 skipped, 2 warnings in 4.62s      (EXIT=0)
-# skips = 2 x test_llm_client async (OpenRouter, P0-T5) + 1 x live MedlinePlus (gated)
+$ python -m pytest tests/ -q                    # full suite (P0-T6 + concurrent P0-T5 test infra)
+158 passed, 4 skipped in 5.34s                  (EXIT=0)
+# skips = 3 x gated OpenRouter integration (P0-T5: OPENROUTER_RUN_INTEGRATION=1)
+#       + 1 x gated live MedlinePlus (MEDLINEPLUS_LIVE=1)
 
 $ python -m pytest tests/test_schemas.py tests/test_reference_range.py \
       tests/test_p0_t2_safety.py tests/test_pdf_extraction.py \
@@ -362,7 +363,7 @@ $ MEDLINEPLUS_LIVE=1 python -m pytest tests/test_medlineplus_live.py -v
 1 passed in 0.84s                               (live PASS)
 ```
 
-Baseline before this change: 104 passed, 2 skipped. After: 104 + 15 new = 119 passed, 3 skipped (the extra skip is the intentionally gated live test).
+Baseline before P0-T6: 104 passed, 2 skipped. P0-T6 alone added 16 tests → 120 passed, 3 skipped. After rebasing onto the concurrently-landed P0-T5 test infrastructure (`a89bf84`, `daeee43`): **158 passed, 4 skipped** — every skip is an intentionally gated external test.
 
 ### Limitations
 

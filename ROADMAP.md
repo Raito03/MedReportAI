@@ -236,20 +236,24 @@ Mode B integration tests (see below).
 
 ## P0-T6 — MedlinePlus Grounding Hardening
 
+**Status: DONE**
+
+**Commit:** `c1b8e42`
+
 **Owner:** Data / Explanation
 
 **Subtasks:**
 
-* Verify LOINC → MedlinePlus Connect lookup for all supported lab codes
-* Verify successful response parsing
-* Verify no-match behavior
-* Verify timeout/network behavior
-* Verify malformed-response behavior
-* Verify fallback citation behavior
-* Ensure fallback never fabricates a MedlinePlus Connect result
-* Confirm every explanation has a citation or controlled no-citation state
-* Confirm explanation agent never invents a medical source
-* Add end-to-end citation regression tests
+* [x] Verify LOINC → MedlinePlus Connect lookup for all supported lab codes
+* [x] Verify successful response parsing
+* [x] Verify no-match behavior
+* [x] Verify timeout/network behavior
+* [x] Verify malformed-response behavior
+* [x] Verify fallback citation behavior
+* [x] Ensure fallback never fabricates a MedlinePlus Connect result
+* [x] Confirm every explanation has a citation or controlled no-citation state
+* [x] Confirm explanation agent never invents a medical source
+* [x] Add end-to-end citation regression tests
 
 **Dependency:** P0-T1
 
@@ -258,6 +262,15 @@ Mode B integration tests (see below).
 **Exit criterion:**
 
 > Patient-facing explanations are grounded in a traceable MedlinePlus source or fail safely.
+
+**Completion notes (2026-09-26):**
+
+* `is_trusted_medlineplus_url()` trust policy: only `medlineplus.gov` (exact/subdomain), http(s), no credentials — suffix/path/userinfo/scheme tricks rejected; enforced on Connect responses, fallback pages, and derived citation fields
+* Response parsing hardened for all project-expected shapes (`feed`/`entries`/`result`, single record, `[{"url": ...}]`); `None/{}/[{}]/[{"foo":"bar"}]/42`/invalid JSON fail controlled with debuggable errors; `URLError(timeout)` classified as timeout
+* `agents/explainer.py` builds a trusted citation map from the lookup layer and **always overrides** the LLM's citation; LLM-echoed `citation_url`/`citation_status` are stripped; an invented `test_name` receives the explicit no-citation state — the LLM can never invent or change a source
+* `FinalExplanation` extended (not replaced) with `citation_url: Optional[str]` and `citation_status: Literal["available","unavailable"]` — explicit controlled no-citation state, backward-compatible defaults
+* `tests/test_p0_t6_citation_grounding.py`: 16 deterministic tests (HTTP + LLM fully mocked) covering all 12 required behavior cases, all 27 mapped LOINC codes, and a full mocked orchestrator E2E; `tests/test_medlineplus_live.py`: gated live test (`MEDLINEPLUS_LIVE=1`)
+* Exact results: P0-T6 16/16; full suite after rebase onto the concurrent P0-T5 test infra (`a89bf84`) = **158 passed, 4 skipped** (all 4 skips are gated external tests: 3 OpenRouter per P0-T5, 1 gated live MedlinePlus); P0-T6 alone was 120 passed / 3 skipped; P0-T1..T4 regression 104/104; live MedlinePlus test **PASSED** (0.84s)
 
 ---
 
@@ -487,7 +500,7 @@ Run these in parallel:
 * [x] P0-T3 — PDF Extraction Robustness (`68f5b85`)
 * [x] P0-T4 — Agent Seam / Schema Integration Tests (`96f7820`, `f108175`)
 * [x] P0-T5 — OpenRouter Test Infrastructure (`a89bf84`)
-* [ ] P0-T6
+* [x] P0-T6 — MedlinePlus Grounding Hardening (`c1b8e42`)
 
 Additionally:
 
