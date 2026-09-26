@@ -80,6 +80,7 @@ Each agent has:
 ├── tests/
 │   ├── test_schemas.py       # Pydantic model validation
 │   ├── test_reference_range.py # Lookup correctness
+│   ├── test_pdf_extraction.py # PDF extraction robustness (deterministic, no API key)
 │   └── test_llm_client.py    # SDK connectivity + tool loop
 │
 ├── ui/

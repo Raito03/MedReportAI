@@ -1,7 +1,9 @@
-# Progress Log — Lab Report Explainer Agent
+﻿# Progress Log — Lab Report Explainer Agent
 
 ## Current Status
 Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Literal`). 43 unit tests pass (24 reference range, 9 schema, 10 MedlinePlus). Unit conversion, unavailable-range propagation, and risk flagger guard all verified. E2E non-LLM path verified end-to-end.
+
+**P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 103 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
 
 ---
 
@@ -198,6 +200,126 @@ Total: 43 passed in 1.94s
 ### Remaining NHANES Work
 
 The current `reference_ranges.json` uses **MedlinePlus-documented intervals**, not NHANES-derived intervals. Per the task instructions, NHANES-specific provenance is a future hardening step.
+
+---
+
+## P0-T3 — PDF Extraction Robustness (2026-09-26)
+
+**Status: COMPLETE** — all acceptance criteria verified by the test results below.
+
+> Note: this P0-T3 work started from the pre-roadmap baseline (`c88c7a5`), before
+> `ROADMAP.md` existed locally (the roadmap landed on `origin/master` in `3723f63`).
+> The section below has been verified against ROADMAP.md's P0-T3 subtasks and exit
+> criterion, and integrated with the P0-T1/P0-T2/P0-T4 work already on `origin/master`,
+> which P0-T3 does not modify.
+
+### What changed
+
+| File | Change |
+|------|--------|
+| `tools/pdf_extractor.py` | Added a small controlled-failure hierarchy: `PdfExtractionError(ValueError)` → `PdfInvalidError` (corrupt/unreadable/not-a-PDF), `PdfNoTextError(reason="blank" \| "image_only")` (readable PDF but no extractable text). All pdfplumber/pdfminer exceptions are wrapped into these; whitespace-only pages are now detected as no-text; image-only detection via `page.images`. `pdf_to_text(file_path) -> str` signature and success behavior unchanged. |
+| `ui/cli.py` | Catches `PdfExtractionError` → prints a clear one-line error and exits 1 instead of dumping a traceback. |
+| `ui/app.py` | Same controlled handling in the Streamlit path, with temp-file cleanup on failure. |
+| `tests/test_pdf_extraction.py` | **New** — 12 deterministic tests (all 7 P0-T3 categories + 2 regression + 1 orchestrator integration + OCR guard + missing-file). |
+| `README.md` | Added the new test file to the project-structure listing. |
+| `PROGRESS.md` | This section. |
+
+**Not changed by P0-T3 (deliberately):** `pipeline/orchestrator.py` (its `ValueError("PDF
+extraction returned empty text")` safety net still stands; the new errors subclass `ValueError`,
+so all existing callers keep working), `core/schemas.py`, `agents/*` (LOINC / reference-range /
+risk-classification behavior belongs to P0-T1/P0-T2 and was not modified here),
+`tools/generate_samples.py`, `data/*`.
+No new dependencies were added to `requirements.txt`. No OCR, LangChain, LangGraph, RAG,
+or vector store was introduced — architecture remains the sequential Python pipeline.
+
+### Failure classification (project convention = `ValueError`-based)
+
+| Category | Result |
+|----------|--------|
+| Supported text PDF (incl. multi-page, table-heavy, odd whitespace) | returns `str` (pages joined with `\n\n`, order preserved, blank pages skipped without losing others) |
+| Valid PDF, no extractable text, no images (blank) | `PdfNoTextError(reason="blank")` |
+| Valid PDF, image only / scanned (no text, has images) | `PdfNoTextError(reason="image_only")` — message explicitly states OCR is unsupported/out of scope |
+| Corrupt / truncated / empty / not-a-PDF | `PdfInvalidError` |
+| Page read failure after open | `PdfExtractionError` |
+| Missing file | `FileNotFoundError` (pre-existing behavior, unchanged) |
+
+### Fixtures added (all generated programmatically at test time — no binary files committed)
+
+- normal text PDF (reportlab) — 1 page, 3 lab rows
+- multi-page PDF — 4 pages: text / text / **blank** / text (proves blank middle page loses nothing)
+- table-heavy PDF — header + grid rules + 12 realistic lab rows (names, values, units, ranges)
+- unusual whitespace PDF — multiple spaces, literal tab characters, tab-stop column jumps, irregular line breaks, side-by-side columns
+- blank PDF — one empty page
+- image-only PDF — minimal hand-built PDF (stdlib `zlib`): 8×8 embedded image XObject, zero text operators
+- corrupt PDFs — 3 deterministic variants: static malformed bytes, valid PDF truncated to 1/3, zero-byte file
+
+### Exact test results (ran on this machine, Python 3.11.3 / pytest 7.3.1)
+
+```text
+$ python -m pytest tests/test_pdf_extraction.py -v
+12 passed in 2.62s
+
+$ python tests/test_pdf_extraction.py          # __main__ entry point
+12 passed in 2.42s   (EXIT=0)
+
+$ python -m pytest tests/ -v                   # merged suite after rebase onto origin/master
+                                              # (P0-T1 + P0-T2 + P0-T4 + P0-T3 + MedlinePlus)
+103 passed, 2 skipped, 2 warnings in 4.58s   (EXIT=0)
+```
+
+CLI controlled-failure checks (clear message + exit code 1, no traceback):
+
+```text
+$ python -m ui.cli corrupt.pdf
+Error: PDF extraction failed: Cannot read PDF — file is corrupt or not a valid PDF ... (PdfminerException: Unexpected EOF)
+
+$ python -m ui.cli blank.pdf
+Error: PDF extraction failed: No extractable text found — the PDF is blank or empty: ...
+
+$ python -m ui.cli image_only.pdf
+Error: PDF extraction failed: No extractable text found — the PDF appears to be an image-only/scanned document.
+Text extraction without OCR is unsupported (OCR is out of scope): ...
+```
+
+### Unrelated failures / blockers (NOT caused by P0-T3)
+
+1. **`tests/test_llm_client.py` — 2 skipped under pytest** (pre-existing): the async tests are
+   skipped because no async pytest plugin is installed; the file is designed to run as a
+   script and requires an OpenRouter API key + network. On this machine `.env` is absent
+   (`API key set: NO`), so its `__main__` run reports both checks as FAIL-by-skip without
+   making any network call. Untouched by P0-T3.
+2. **`python tests/test_schemas.py` / `test_reference_range.py` as standalone scripts** fail
+   with `ModuleNotFoundError: No module named 'core'/'agents'` — **pre-existing**: those
+   files have no `sys.path` bootstrap (unlike `test_llm_client.py`) and are run via pytest,
+   where they pass (included in the 103 above). Not modified (locked P0-T1/T2 files).
+
+### Environment notes (this machine only — no repo changes)
+
+- No `python` on PATH; used `C:\Users\Ayush\anaconda3\python.exe` (3.11.3, pytest 7.3.1).
+- Installed into the env (all already listed in `requirements.txt`, none new):
+  `pdfplumber 0.11.10`, `reportlab 5.0.0.1`, `python-dotenv`, `openrouter-agent-sdk 0.8.0`.
+- Re-applied the documented `OutputImage` patch to
+  `...\site-packages\openrouter_agent\__init__.py` (Known Issue #1 — site-packages patch lost
+  on reinstall; without it `import openrouter_agent` fails and even the P0-T2 tests cannot
+  import). Patch: removed the nonexistent `OutputImage` from the `openrouter.components`
+  import list and aliased `OutputImage = InputImage` before its `__all__` export.
+
+### Limitations
+
+- **OCR remains out of scope and was not introduced** — enforced by
+  `test_extractor_contains_no_ocr_dependencies` (guards the extractor source against
+  tesseract/easyocr/paddleocr/keras_ocr/ocrmypdf). Image-only PDFs fail with an explicit
+  "unsupported (OCR is out of scope)" error instead of fabricated text.
+- Table handling = pdfplumber plain-text line extraction (each table row extracts as a
+  single line, e.g. `Glucose 145 mg/dL 70-100`). No table-structure reconstruction — not
+  required by the existing architecture; no name/value content is silently discarded.
+- Literal tab bytes (0x09) inside PDF text strings are mapped by pdfminer through the font
+  encoding and can surface as arbitrary glyphs (e.g. `Hemoglobinn14.2ng/dL`). Extraction
+  does not crash and every fragment remains present (tested); real tab layouts (column
+  jumps) extract fully paired values (tested).
+- Blank vs. image-only is distinguished via `page.images`; an exotic scanned PDF could be
+  reported as "blank" instead of "image_only", but either way it is a controlled
+  `PdfNoTextError` — never a fake success.
 
 ---
 

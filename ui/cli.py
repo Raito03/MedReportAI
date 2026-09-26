@@ -12,6 +12,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pipeline.orchestrator import run_pipeline
+from tools.pdf_extractor import PdfExtractionError
 
 
 def main():
@@ -24,7 +25,13 @@ def main():
         print(f"Error: File not found: {pdf_path}")
         sys.exit(1)
 
-    result = asyncio.run(run_pipeline(pdf_path))
+    try:
+        result = asyncio.run(run_pipeline(pdf_path))
+    except PdfExtractionError as exc:
+        # Controlled failure (P0-T3): no uncontrolled traceback for
+        # corrupt/blank/image-only PDFs.
+        print(f"\nError: PDF extraction failed: {exc}")
+        sys.exit(1)
 
     print("\n" + "=" * 60)
     print("RESULTS")

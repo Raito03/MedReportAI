@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 from pipeline.orchestrator import run_pipeline
+from tools.pdf_extractor import PdfExtractionError
 
 
 def main():
@@ -26,7 +27,14 @@ def main():
             f.write(uploaded_file.read())
 
         with st.spinner("Analyzing lab report..."):
-            result = asyncio.run(run_pipeline(temp_path))
+            try:
+                result = asyncio.run(run_pipeline(temp_path))
+            except PdfExtractionError as exc:
+                # Controlled failure (P0-T3): show a clear error instead of
+                # crashing the app for corrupt/blank/image-only PDFs.
+                os.remove(temp_path)
+                st.error(f"PDF extraction failed: {exc}")
+                return
 
         os.remove(temp_path)
 
