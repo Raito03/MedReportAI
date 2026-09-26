@@ -462,7 +462,7 @@ Future changes should not modify the locked reference-range safety contract or P
 
 ---
 
-## P1-T4 — Failure Handling + Observability (2026-09-26)
+## P1-T4 — Failure Handling + Observability (2026-09-26, hardened)
 
 **Status: COMPLETE**
 
@@ -470,28 +470,53 @@ Future changes should not modify the locked reference-range safety contract or P
 
 | File | Change |
 |------|--------|
-| `core/observability.py` | **NEW** — Failure taxonomy (15 types), PipelineEvent, PipelineLogger, LatencyTracker, privacy protection (contains_sensitive_data, sanitize_metadata) |
-| `tests/test_p1_t4_failure_observability.py` | **NEW** — 54 deterministic tests covering all failure categories |
+| `core/observability.py` | Failure taxonomy (18 types), PipelineEvent, PipelineLogger, LatencyTracker, classify_exception(), recursive privacy sanitization |
+| `pipeline/orchestrator.py` | Wired PipelineLogger into real pipeline — every stage emits success/failure events with latency, retry_count, failure_type |
+| `tests/test_p1_t4_failure_observability.py` | 41 deterministic tests exercising the REAL orchestrator with observability verification |
 
 ### Failure taxonomy
 
-15 explicit failure types:
-- `pdf_error`, `llm_timeout`, `llm_network_error`, `llm_auth_error`, `llm_rate_limit`, `llm_server_error`
-- `llm_parse_error`, `schema_validation_error`, `reference_unavailable`
-- `medlineplus_no_match`, `medlineplus_timeout`, `medlineplus_network_error`, `medlineplus_invalid_response`
-- `verification_failure`, `extraction_failure`, `risk_classification_failure`, `explanation_failure`, `unknown_failure`
+18 explicit failure types (15 core + 3 stage-specific):
+- Core: `pdf_error`, `llm_timeout`, `llm_network_error`, `llm_auth_error`, `llm_rate_limit`, `llm_server_error`, `llm_parse_error`, `schema_validation_error`, `reference_unavailable`, `medlineplus_no_match`, `medlineplus_timeout`, `medlineplus_network_error`, `medlineplus_invalid_response`, `verification_failure`, `unknown_failure`
+- Stage-specific: `extraction_failure`, `risk_classification_failure`, `explanation_failure`
 
-### Observability
+### Observability (wired into real orchestrator)
 
 - `PipelineEvent`: structured event with stage, status, failure_type, retry_count, latency_ms, reason, metadata
-- `PipelineLogger`: records events, provides failure summary, stage-level logging
+- `PipelineLogger`: records events, provides failure summary, stage-level logging — accepts optional parameter in `run_pipeline()`
 - `LatencyTracker`: records min/max/avg latency per stage
+- `classify_exception()`: honest exception-to-failure-type mapping (never guesses)
+
+### Real pipeline evidence
+
+- Success path: all 6 stages emit success events with latency_ms >= 0 and correct metadata
+- PDF failure: only PDF stage event emitted, zero downstream LLM calls
+- LLM extraction timeout: extraction stage emits llm_timeout failure, no downstream
+- LLM risk failure: risk stage emits failure, no explanation
+- LLM explanation failure: explanation stage emits failure
+- MedlinePlus timeout/network: fallback citations, no fabrication
+- Verifier rejection: verification_failure event with retry_count, bounded termination
+- Upstream failure propagation: early stage failure prevents all downstream stages
 
 ### Privacy protection
 
-- `contains_sensitive_data()`: detects SSN, phone, email, patient name patterns
-- `sanitize_metadata()`: redacts sensitive fields, truncates long strings
-- Tests verify no raw report text in events
+- `contains_sensitive_data()`: detects SSN, phone, email, DOB, MRN patterns
+- `sanitize_metadata()`: recursively sanitizes nested dicts/lists, truncates long strings
+- Real pipeline events contain no raw PDF text or patient content
+
+### Test results
+
+```
+tests/test_p1_t4_failure_observability.py: 41 passed
+Full suite: 209 passed, 4 skipped (gated external tests only)
+P0 regression: 87 tests pass, no regressions
+```
+
+### What was removed vs initial implementation
+
+- Removed 13 isolated unit tests that tested observability classes in isolation
+- Replaced with real pipeline integration tests that prove the orchestrator emits correct events
+- Net: fewer tests but higher-quality coverage (real pipeline evidence)
 
 ### Test results
 

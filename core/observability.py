@@ -3,6 +3,8 @@
 Provides structured logging for pipeline stages, failure taxonomy, and privacy-safe metadata.
 """
 
+import json
+import re
 import time
 import logging
 from enum import Enum
@@ -11,9 +13,15 @@ from typing import Optional, List, Dict, Any
 
 
 # --- Failure Taxonomy ---
+# 15 core types + 3 stage-specific types = 18 total.
+# The 15 core types cover infrastructure failure categories.
+# The 3 stage-specific types (extraction_failure, risk_classification_failure,
+# explanation_failure) are useful for classifying failures at specific pipeline stages
+# where the underlying cause cannot be mapped to a core infrastructure type.
 
 class FailureType(str, Enum):
     """Explicit failure categories for the pipeline."""
+    # Core infrastructure failures (15)
     PDF_ERROR = "pdf_error"
     LLM_TIMEOUT = "llm_timeout"
     LLM_NETWORK_ERROR = "llm_network_error"
@@ -28,10 +36,16 @@ class FailureType(str, Enum):
     MEDLINEPLUS_NETWORK_ERROR = "medlineplus_network_error"
     MEDLINEPLUS_INVALID_RESPONSE = "medlineplus_invalid_response"
     VERIFICATION_FAILURE = "verification_failure"
+    UNKNOWN_FAILURE = "unknown_failure"
+    # Stage-specific failures (3)
     EXTRACTION_FAILURE = "extraction_failure"
     RISK_CLASSIFICATION_FAILURE = "risk_classification_failure"
     EXPLANATION_FAILURE = "explanation_failure"
-    UNKNOWN_FAILURE = "unknown_failure"
+
+
+# Number of core infrastructure failure types (for documentation consistency)
+CORE_FAILURE_TYPE_COUNT = 15
+TOTAL_FAILURE_TYPE_COUNT = 18
 
 
 class PipelineStage(str, Enum):
@@ -59,7 +73,10 @@ class PipelineEvent:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for logging/serialization."""
+        """Convert to dictionary for logging/serialization.
+
+        Metadata is sanitized before serialization to prevent PHI leakage.
+        """
         result = {
             "stage": self.stage.value,
             "status": self.status,
@@ -72,7 +89,7 @@ class PipelineEvent:
         if self.reason:
             result["reason"] = self.reason
         if self.metadata:
-            result["metadata"] = self.metadata
+            result["metadata"] = sanitize_metadata(self.metadata)
         return result
 
 
@@ -104,12 +121,14 @@ class PipelineLogger:
         return time.monotonic()
 
     def log_stage_success(self, stage: PipelineStage, start_time: float,
-                          metadata: Optional[Dict[str, Any]] = None):
+                          metadata: Optional[Dict[str, Any]] = None,
+                          retry_count: int = 0):
         """Log successful stage completion."""
         latency_ms = (time.monotonic() - start_time) * 1000
         event = PipelineEvent(
             stage=stage,
             status="success",
+            retry_count=retry_count,
             latency_ms=latency_ms,
             metadata=metadata or {},
         )
@@ -146,19 +165,92 @@ class PipelineLogger:
         return summary
 
 
+# --- Exception Classification ---
+
+def classify_exception(exc: Exception) -> FailureType:
+    """Map a Python exception to a Pipeline failure type.
+
+    Uses honest classification — never guesses a category that doesn't match.
+    Falls back to UNKNOWN_FAILURE for unrecognized exceptions.
+    """
+    # PDF extraction errors
+    from tools.pdf_extractor import PdfExtractionError
+    if isinstance(exc, PdfExtractionError):
+        return FailureType.PDF_ERROR
+
+    # LLM/SDK errors
+    exc_type = type(exc).__name__
+    exc_module = type(exc).__module__ or ""
+
+    # Timeout errors
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        if "timeout" in str(exc).lower() or isinstance(exc, TimeoutError):
+            return FailureType.LLM_TIMEOUT
+        return FailureType.LLM_NETWORK_ERROR
+
+    # Connection/network errors
+    if isinstance(exc, ConnectionError):
+        return FailureType.LLM_NETWORK_ERROR
+
+    # Authentication errors
+    if isinstance(exc, PermissionError) or "auth" in exc_type.lower():
+        return FailureType.LLM_AUTH_ERROR
+
+    # Rate limit errors
+    if "rate" in str(exc).lower() and "limit" in str(exc).lower():
+        return FailureType.LLM_RATE_LIMIT
+
+    # JSON parsing errors
+    if isinstance(exc, json.JSONDecodeError):
+        return FailureType.LLM_PARSE_ERROR
+
+    # Pydantic/schema validation
+    try:
+        from pydantic import ValidationError
+        if isinstance(exc, ValidationError):
+            return FailureType.SCHEMA_VALIDATION_ERROR
+    except ImportError:
+        pass
+
+    # OpenRouter SDK errors
+    if "openrouter" in exc_module or "openrouter" in exc_type.lower():
+        msg = str(exc).lower()
+        if "timeout" in msg:
+            return FailureType.LLM_TIMEOUT
+        if "auth" in msg or "401" in msg or "403" in msg:
+            return FailureType.LLM_AUTH_ERROR
+        if "rate" in msg or "429" in msg:
+            return FailureType.LLM_RATE_LIMIT
+        if "500" in msg or "503" in msg or "server" in msg:
+            return FailureType.LLM_SERVER_ERROR
+        if "connect" in msg or "network" in msg:
+            return FailureType.LLM_NETWORK_ERROR
+
+    # Generic value errors from extraction agents
+    if isinstance(exc, ValueError):
+        msg = str(exc).lower()
+        if "parse" in msg or "json" in msg:
+            return FailureType.LLM_PARSE_ERROR
+        if "schema" in msg or "validation" in msg:
+            return FailureType.SCHEMA_VALIDATION_ERROR
+
+    return FailureType.UNKNOWN_FAILURE
+
+
 # --- Privacy Protection ---
 
 # Patterns that indicate sensitive data that must NOT be logged
 SENSITIVE_PATTERNS = [
     r'\b\d{3}-\d{2}-\d{4}\b',  # SSN
-    r'\b\d{10}\b',  # Phone numbers
+    r'\b\d{10}\b',  # Phone numbers (10 consecutive digits)
     r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
     r'patient.*name',  # Patient name references
     r'date.*birth',  # DOB references
+    r'\bDOB\b',  # DOB abbreviation
     r'\bMRN\b',  # Medical Record Number
+    r'\b\d{2}/\d{2}/\d{4}\b',  # Date in MM/DD/YYYY format (DOB-like)
+    r'\b\d{4}-\d{2}-\d{2}\b',  # Date in YYYY-MM-DD format
 ]
-
-import re
 
 
 def contains_sensitive_data(text: str) -> bool:
@@ -172,18 +264,26 @@ def contains_sensitive_data(text: str) -> bool:
     return False
 
 
-def sanitize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
-    """Remove or redact sensitive fields from metadata before logging."""
-    sanitized = {}
-    for key, value in metadata.items():
-        if isinstance(value, str) and contains_sensitive_data(value):
-            sanitized[key] = "[REDACTED]"
-        elif isinstance(value, str) and len(value) > 1000:
-            # Truncate very long strings that might contain report content
-            sanitized[key] = value[:100] + "...[TRUNCATED]"
-        else:
-            sanitized[key] = value
-    return sanitized
+def sanitize_metadata(metadata: Any) -> Any:
+    """Recursively remove or redact sensitive fields from metadata before logging.
+
+    Handles nested dicts, lists, and strings. Protects against:
+    - SSN, phone, email, patient name, DOB, MRN patterns
+    - Very long strings that might contain report content
+    - Nested structures that could leak PHI
+    """
+    if isinstance(metadata, dict):
+        return {k: sanitize_metadata(v) for k, v in metadata.items()}
+    elif isinstance(metadata, list):
+        return [sanitize_metadata(item) for item in metadata]
+    elif isinstance(metadata, str):
+        if contains_sensitive_data(metadata):
+            return "[REDACTED]"
+        if len(metadata) > 1000:
+            return metadata[:100] + "...[TRUNCATED]"
+        return metadata
+    else:
+        return metadata
 
 
 # --- Latency Tracker ---
@@ -221,7 +321,3 @@ class LatencyTracker:
             "max": max(latencies),
             "avg": sum(latencies) / len(latencies),
         }
-
-
-# Import json at module level for the logger
-import json

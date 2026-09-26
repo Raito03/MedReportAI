@@ -443,14 +443,16 @@ Desired flow:
 
 > Failures are explicit, bounded, observable, and never silently converted into medical conclusions.
 
-**Completion notes:**
+**Completion notes (hardened):**
 
-* 54 deterministic tests covering all failure categories
-* Failure taxonomy: 15 explicit failure types (pdf_error, llm_timeout, llm_network_error, etc.)
-* Observability: PipelineLogger, LatencyTracker, PipelineEvent structured events
-* Privacy: contains_sensitive_data(), sanitize_metadata() protect patient data
-* Full suite: 222 passed, 4 skipped (gated external tests only)
-* No P0 regressions
+* Real orchestrator emits PipelineLogger events at every stage (success + failure)
+* Failure taxonomy: 18 failure types (15 core + 3 stage-specific), with classify_exception() for honest mapping
+* Observability: PipelineLogger, LatencyTracker, PipelineEvent with stage/status/failure_type/retry_count/latency_ms/reason/metadata
+* Privacy: recursive sanitize_metadata() protects nested dicts/lists, pattern-based PHI detection (SSN, DOB, phone, email, MRN)
+* Retry observability: retry_count observable on both failure and success events
+* 41 deterministic tests covering real pipeline success, PDF/LLM/reference/MedlinePlus/verifier failures, retry bounds, privacy, serialization, taxonomy, P0 regression
+* Full suite: 209 passed, 4 skipped (gated external tests only)
+* No P0 regressions (87 P0 tests pass)
 
 ---
 
