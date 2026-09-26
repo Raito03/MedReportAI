@@ -332,6 +332,7 @@ def lookup_ranges(values: List[ExtractedLabValue]) -> List[RangeCheckedValue]:
             reference_high=r.reference_high,
             in_range=r.in_range,
             range_available=r.range_available,
+            range_note=r.range_note,
         )
         for r in output.results
     ]

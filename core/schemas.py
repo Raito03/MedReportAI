@@ -22,6 +22,10 @@ class RangeCheckedValue(BaseModel):
     reference_high: Optional[float] = None
     in_range: bool = False
     range_available: bool = False
+    # Why a range is unavailable (empty string when a range was found).
+    # Propagated from the lookup tool so downstream reasoning keeps the
+    # specific cause (unknown LOINC / unit mismatch / missing context).
+    range_note: str = ""
 
 
 class RiskFlaggedValue(BaseModel):

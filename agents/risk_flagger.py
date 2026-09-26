@@ -132,7 +132,11 @@ async def classify_risk(checked: List[RangeCheckedValue]) -> List[RiskFlaggedVal
             value=c.value,
             unit=c.unit,
             status="unavailable",
-            reasoning=f"Cannot classify: {note}",
+            reasoning=(
+                f"Cannot classify: {note.rstrip('. ')}; no valid applicable "
+                "reference range was available, so no range-based risk "
+                "classification was performed."
+            ),
         ))
 
     # Classify values with valid reference ranges via LLM
@@ -157,7 +161,15 @@ async def classify_risk(checked: List[RangeCheckedValue]) -> List[RiskFlaggedVal
         if isinstance(data, dict):
             data = data.get("classifications", data.get("values", []))
 
+        # SAFETY (P0-T2): only values that were actually sent for range-based
+        # classification may receive an LLM-assigned status. Any item the model
+        # invents for an unavailable-range value (or an unknown test) is dropped
+        # so range_available=False can never become normal/mildly_abnormal/critical.
+        classifiable_names = {c.test_name for c in classifiable}
+
         for item in data:
+            if not isinstance(item, dict) or item.get("test_name", "") not in classifiable_names:
+                continue
             # Ensure loinc_code is threaded from input
             if "loinc_code" not in item or not item["loinc_code"]:
                 # Find matching checked value to get loinc_code
