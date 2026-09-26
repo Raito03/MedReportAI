@@ -1,7 +1,11 @@
 """Orchestrator — wires all agents sequentially with error handling.
 
 Flow: PDF → extract → lookup → risk → explain → verify
-If verifier returns send_back_for_correction, retry once with issues injected.
+Bounded self-correction (P1-T2): if the verifier fails, its issues_found are
+injected verbatim into the next explain() prompt and the loop retries — at
+most MAX_RETRIES times (MAX_RETRIES + 1 generation attempts total). After
+the bound, the pipeline returns a controlled failure (verified=False plus the
+issues) — never an unverified explanation presented as verified.
 All agent calls are async (openrouter-agent-sdk uses call_model()).
 """
 
@@ -124,13 +128,29 @@ async def run_pipeline(pdf_path: str, logger: Optional[PipelineLogger] = None) -
         )
         raise
 
-    # --- Stage 5: Explanation + verification with retry loop ---
+    # --- Stage 5: Explanation + verification with bounded self-correction ---
+    # First attempt generates fresh explanations. On verifier failure the
+    # verifier's issues_found are passed into explain() so the regeneration
+    # targets exactly what was rejected; the verifier then re-checks the
+    # corrected output with the same (unchanged) rules. The loop is bounded
+    # by MAX_RETRIES — exhaustion returns a controlled failure below.
+    verification = None
     retry_count = 0
     for attempt in range(MAX_RETRIES + 1):
+        correction_issues = (
+            verification.issues_found if verification is not None else None
+        )
         stage_start = logger.log_stage_start(PipelineStage.EXPLANATION)
         try:
             print(f"[5/5] Generating explanations (attempt {attempt + 1})...")
-            explanations = await explain(risk_flagged)
+            if correction_issues:
+                print(
+                    f"      [CORRECT] Regenerating with {len(correction_issues)} "
+                    "verifier issue(s) injected..."
+                )
+            explanations = await explain(
+                risk_flagged, correction_issues=correction_issues
+            )
             print(f"      Generated {len(explanations)} explanations")
             logger.log_stage_success(
                 PipelineStage.EXPLANATION, stage_start,
@@ -194,7 +214,9 @@ async def run_pipeline(pdf_path: str, logger: Optional[PipelineLogger] = None) -
             )
             raise
 
-    # After max retries — return with issues flagged
+    # After max retries — controlled failure: the issues are reported and the
+    # output is explicitly marked unverified (the invalid explanation is
+    # never silently accepted as verified).
     print(f"      [FAIL] Verifier FAILED after {MAX_RETRIES + 1} attempts")
     return {
         "explanations": [e.model_dump() for e in explanations],
