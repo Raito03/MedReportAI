@@ -173,35 +173,43 @@ Test these boundaries:
 
 ## P0-T5 — OpenRouter Test Infrastructure
 
+**Status: DONE**
+
+**Commit:** `a89bf84`
+
 **Owner:** LLM / DevOps
 
-**Current known issue:**
+**Resolved known issue (was: two failing async tests):**
 
-`tests/test_llm_client.py` contains two async tests:
+`tests/test_llm_client.py` contained two async tests:
 
 * `test_basic_chat`
 * `test_tool_calling`
 
-The repository currently does not declare the required pytest async test infrastructure.
+**Root cause (determined):** the tests were `async def` with no pytest async
+plugin declared, and — more fundamentally — real-API integration tests were
+running inside the normal deterministic suite. **Resolution:** no new test
+dependency was added; the tests were converted to sync wrappers and gated as
+Mode B integration tests (see below).
 
 **Subtasks:**
 
-* Reproduce the two failures locally
-* Capture the exact pytest failure/collection output
-* Determine whether the root cause is:
+* [x] Reproduce the two failures locally
+* [x] Capture the exact pytest failure/collection output
+* [x] Determine whether the root cause is:
   * pytest async configuration
   * missing dependency
   * OpenRouter SDK behavior
   * API/model behavior
   * API key/environment
   * combination of the above
-* Add only the minimum required test dependency/configuration
-* Make tests deterministic enough for local/CI validation
-* Clearly separate unit tests from external OpenRouter integration tests
-* Clearly mark API-key-dependent tests as integration tests
-* Test against the currently selected model: `cohere/north-mini-code:free`
-* Document required environment variables
-* Document expected external failure modes
+* [x] Add only the minimum required test dependency/configuration
+* [x] Make tests deterministic enough for local/CI validation
+* [x] Clearly separate unit tests from external OpenRouter integration tests
+* [x] Clearly mark API-key-dependent tests as integration tests
+* [x] Test against the currently selected model: `cohere/north-mini-code:free`
+* [x] Document required environment variables
+* [x] Document expected external failure modes
 
 **Parallel:** Completely independent. Can start immediately.
 
@@ -210,6 +218,19 @@ The repository currently does not declare the required pytest async test infrast
 > The team can separately report deterministic/unit-test status and OpenRouter integration-test status with known causes.
 
 **Important:** Do NOT modify Task 1 or reopen commit `1ffcd55` while solving this.
+
+**Completion notes (2026-09-26):**
+
+* Two test modes, clearly separated:
+  * **Mode A (deterministic/offline):** normal `pytest` — never calls OpenRouter, never needs a key. An autouse guard (`tests/conftest.py`) fails any unexpected agent LLM call immediately.
+  * **Mode B (integration):** `tests/test_llm_client.py` + `tests/integration/test_openrouter_smoke.py` — gated behind `OPENROUTER_RUN_INTEGRATION=1`, skip with `SKIPPED: OPENROUTER_API_KEY is not configured` when no key; never run accidentally
+* Reusable `FakeLLM` (`tests/fake_llm.py`): sequenced deterministic responses, full call recording (model/input/tools/stop_when), `call_count`/`last_prompt`, exception simulation, controlled failure on unexpected extra calls
+* 38 deterministic tests cover: response parsing (valid/empty/malformed/missing-content), timeout/connection/401/403/429/500/503/408 via the SDK's real `openrouter.errors` types (single attempt, no invented retry), API-key leak protection (repo-wide credential scan + `.gitignore` rules), model configuration/override, all four LLM agents driven by the fake, cross-stage response sequencing, malformed LLM output
+* Live verification against `cohere/north-mini-code:free`: smoke + connectivity tests **3 passed**
+* Full suite: **142 passed, 3 skipped, 0 failed**; deterministic and integration status now reportable separately (Scope Rule 11 satisfied)
+* `.gitignore` hardened: `.env` + `.env.*` ignored, `.env.example` stays tracked; no credentials committed
+
+> P0-T5 behavior must remain locked unless a later task demonstrates a concrete regression.
 
 ---
 
@@ -465,7 +486,7 @@ Run these in parallel:
 * [x] P0-T2 — Reference-Range Safety Consumer Audit (`25d85bf`, `dea0a93`)
 * [x] P0-T3 — PDF Extraction Robustness (`68f5b85`)
 * [x] P0-T4 — Agent Seam / Schema Integration Tests (`96f7820`, `f108175`)
-* [ ] P0-T5
+* [x] P0-T5 — OpenRouter Test Infrastructure (`a89bf84`)
 * [ ] P0-T6
 
 Additionally:
