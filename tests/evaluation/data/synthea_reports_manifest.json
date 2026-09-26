@@ -1,0 +1,87 @@
+{
+  "generator": "tests/evaluation/pdf_fixtures.py (reportlab invariant mode)",
+  "source_of_truth": "tests/evaluation/data/synthea_ground_truth.json",
+  "deterministic": true,
+  "reports": [
+    {
+      "report_id": "synthea_cmp_0001",
+      "pdf_file": "synthea_cmp_0001.pdf",
+      "layout": "columns_no_loinc",
+      "observation_count": 6,
+      "size_bytes": 2108,
+      "sha256": "31ade361c107205c6cc418b4eeff037ec16ff0ac81b93d3016b0c654087ddc7d"
+    },
+    {
+      "report_id": "synthea_cbc_0002",
+      "pdf_file": "synthea_cbc_0002.pdf",
+      "layout": "columns_with_loinc",
+      "observation_count": 6,
+      "size_bytes": 2189,
+      "sha256": "b52193ad43497ee9d7858e54ae162c3199f9712fa76400cf8e9b989881d6e0cc"
+    },
+    {
+      "report_id": "synthea_lipid_0003",
+      "pdf_file": "synthea_lipid_0003.pdf",
+      "layout": "labelled_lines",
+      "observation_count": 4,
+      "size_bytes": 1981,
+      "sha256": "e01f5155fb09e12ad3b8fc727cb52f5ec882c5b0fcc503ad87fa96b7798ce745"
+    },
+    {
+      "report_id": "synthea_multipage_0004",
+      "pdf_file": "synthea_multipage_0004.pdf",
+      "layout": "multipage",
+      "observation_count": 5,
+      "size_bytes": 2805,
+      "sha256": "07d1f1b535c2c48099144211996c82d5e24068ea25c515120092eb5375351558"
+    },
+    {
+      "report_id": "synthea_duplicates_0005",
+      "pdf_file": "synthea_duplicates_0005.pdf",
+      "layout": "duplicate_rows",
+      "observation_count": 4,
+      "size_bytes": 2243,
+      "sha256": "c00e38d4d639711fc50c874546a60261d1d559d207b266372b1cb325b37db698"
+    },
+    {
+      "report_id": "synthea_hepatic_0006",
+      "pdf_file": "synthea_hepatic_0006.pdf",
+      "layout": "columns_with_loinc",
+      "observation_count": 5,
+      "size_bytes": 2128,
+      "sha256": "9029a3ef273f4140deaaccee4a4d0b0d082e5791eff2509cc26e7388b162c3f3"
+    },
+    {
+      "report_id": "synthea_cbc_0007",
+      "pdf_file": "synthea_cbc_0007.pdf",
+      "layout": "columns_no_loinc",
+      "observation_count": 5,
+      "size_bytes": 2119,
+      "sha256": "14a07b10ed250128557f4c7056f632afd938b8b8ae1076e0020cf824e46796c0"
+    },
+    {
+      "report_id": "synthea_proteins_0008",
+      "pdf_file": "synthea_proteins_0008.pdf",
+      "layout": "wide_spacing",
+      "observation_count": 4,
+      "size_bytes": 2059,
+      "sha256": "b7f4a003f23480e96d03d2958535377902a9d62c3103a7bf28ca4627b2ca3b4d"
+    },
+    {
+      "report_id": "synthea_ruled_0009",
+      "pdf_file": "synthea_ruled_0009.pdf",
+      "layout": "ruled_table",
+      "observation_count": 5,
+      "size_bytes": 2267,
+      "sha256": "1c3ef73e62af84fd167eaa5a31e4d0a49e4111d426ee3b4f823393b753e7db13"
+    },
+    {
+      "report_id": "synthea_full_0010",
+      "pdf_file": "synthea_full_0010.pdf",
+      "layout": "multipage_loinc",
+      "observation_count": 5,
+      "size_bytes": 2935,
+      "sha256": "af9718fbf2902898c32efc29399d813105479f863240d5ee10ff78e5ab1d1d07"
+    }
+  ]
+}

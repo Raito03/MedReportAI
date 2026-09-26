@@ -6,6 +6,7 @@ Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Li
 **P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 104 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
 **P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 158 passed / 4 skipped (all skips are gated external tests: 3 OpenRouter per P0-T5 + 1 gated live MedlinePlus); live MedlinePlus test PASSED. See the "P0-T6" section below.
 **P1-T2 (Verifier Self-Correction) completed 2026-09-26** - bounded self-correction loop: the verifier's `issues_found` are now injected verbatim into the correction prompt and the corrected output is re-verified; 5 deterministic E2E tests (success, persistent failure, retry-limit bounds, safety invariants); full suite 173 passed / 4 skipped (same gated external skips as before). See the "P1-T2" section below.
+**P1-T3 (Synthea extraction-accuracy evaluation) completed 2026-09-26** - separately stored synthetic ground truth (10 controlled reports / 49 observations, 27 supported labs), deterministic byte-reproducible report PDFs, field-level + observation-level accuracy metric with duplicate-safe matching and a formatted failure report; measured **49/49 = 100.00%** observation accuracy against the >=95% target (PASS), full suite 168 passed / 4 skipped. The LLM step is mocked, so the number measures the deterministic part of the extraction path (PDF -> text -> schema -> LOINC/unit handling), not live-model accuracy. See the "P1-T3" section below.
 
 ---
 
@@ -518,6 +519,126 @@ The 4 skips are the pre-existing gated external tests (3 OpenRouter integration 
 
 ---
 
+## P1-T3 — Synthea Extraction Accuracy Evaluation (2026-09-26)
+
+**Status: COMPLETE — the reproducible evaluation produces the number: observation accuracy 49/49 = 100.00% against a >=95% target (PASS). Dataset: 10 reports, 49 observations.**
+
+### What was added
+
+| Artifact | Purpose |
+| --- | --- |
+| `tests/evaluation/data/synthea_ground_truth.json` | Hand-authored ground truth, stored separately from the PDFs and never derived from extractor output |
+| `tests/evaluation/data/synthea_reports/*.pdf` | 10 deterministic Synthea-style report PDFs (5 layout families) |
+| `tests/evaluation/data/synthea_reports_manifest.json` | SHA-256 + size + layout per fixture (byte-reproducibility proof) |
+| `tests/evaluation/pdf_fixtures.py` | Renders the PDFs FROM the ground truth (reportlab `invariant=1`) |
+| `tests/evaluation/generate_synthea_reports.py` | CLI to write fixtures + manifest, or `--check` reproducibility |
+| `tests/evaluation/synthea_extraction.py` | Deterministic offline stand-in for the LLM step + real-pipeline runner |
+| `tests/evaluation/evaluator.py` | Field/observation metrics, deterministic matching, formatted failure report |
+| `tests/evaluation/run_evaluation.py` | CLI: evaluation report, `--json`, `--check-fixtures`, `--fail-on-fail` |
+| `tests/evaluation/test_synthea_extraction_accuracy.py` | 7 required tests + 3 rigor checks |
+
+### Dataset (sample count)
+
+* Reports: **10** — aligned columns without a LOINC column, aligned columns with a LOINC column, wide column spacing, ruled grid table, `Test: value unit` labelled lines, two 2-page reports, and a repeat-draw report containing the same test name twice.
+* Expected observations: **49**.
+* Laboratory tests: only the **27 supported tests** of `data/supported_labs.json`; test name, LOINC and unit are checked to come from that file (no invented mapping).
+* LOINC coverage: **25** observations carry a printed LOINC column, **24** require the pipeline's own test-name -> LOINC resolution.
+* Values: normal and abnormal, integer renderings of decimal expectations (`250` vs `250.0`), trailing-zero forms (`0.90`, `4.20`, `1.20`), **10 distinct units**.
+
+### Metric definition (identical copy inside the ground truth `metric_definition` block)
+
+* **field accuracy** = (# expected observations whose matched extracted observation has that field equal) / (# expected observations). A missing observation fails every field.
+* **observation accuracy** = (# expected observations correct on **all four** required fields) / (# expected observations) — headline metric compared against the 95% target.
+* **extraction precision** = (# fully correct extracted observations) / (# extracted observations) — reported for visibility.
+* Comparisons: `test_name` case-insensitive whitespace-collapsed equality; `loinc_code` exact after strip; `value` numeric with float coercion (`math.isclose(abs_tol=1e-9)`) so `5 == 5.0 == 5.00` and `0.90 == 0.9` while `13.4 != 13.0`; `unit` exact after normalisation, otherwise the project's existing conversion/alias table (`agents/reference_range.py`) may accept the pair as **equivalent** (counted separately in the report; no new conversion is invented).
+* **PASS** = observation accuracy >= 95% **AND** every field accuracy >= 95% **AND** unexpected observations == 0 (a hallucinated result is safety-relevant and must not hide behind a high match rate).
+
+### Matching strategy (deterministic, duplicate-safe)
+
+1. **identity match** on (normalized test name, LOINC), k-th occurrence to k-th occurrence in document order — two "Potassium" rows can never be crossed.
+2. **diagnostic pairing** of leftovers by normalized test name (a wrong LOINC is reported as a field mismatch).
+3. **diagnostic pairing** of remaining leftovers by LOINC code (a wrong test name is reported as a field mismatch).
+4. leftovers: expected -> **MISSING**, extracted -> **UNEXPECTED**.
+
+### What is genuinely exercised, and what is mocked
+
+Real code path: `tools.pdf_extractor.pdf_to_text()` reads the real PDF bytes -> `agents.extraction.extract_lab_values()` builds the real prompt, parses the real JSON, validates through the real Pydantic schema and runs the real `resolve_loinc_from_test_name` post-processing -> `core.schemas.ExtractedLabValue` -> evaluator. **Only the LLM call is replaced**, through the project's existing injection point `call_model(client, params)`, by a deterministic stand-in that derives its answer from the text the prompt actually carried. Every report's prompt is asserted to contain the text pdfplumber produced; the run needs no API key and makes no network request (`OfflineClient` guard plus the P0-T5 autouse guard in `tests/conftest.py`).
+
+**Therefore the 100% result describes the deterministic part of the extraction path (PDF -> text -> schema -> LOINC/unit handling), not live-LLM fidelity.** The stand-in cannot hallucinate or skip a row, so this evaluation does not prove that a live model reaches 95%; what it does prove is that the fixtures, ground truth, metric and failure reporting are correct and reproducible, that 5 different PDF layouts are read correctly by the real extractor, that all 49 LOINC resolutions and unit comparisons of the real pipeline are correct, and that the metric detects every failure class (tests 2-5 deliberately introduce a wrong value/unit/LOINC/test name, a dropped row, a hallucinated row and swapped duplicates).
+
+### Exact results
+
+```
+Synthea Extraction Accuracy Evaluation
+--------------------------------------
+
+Dataset: MedReportAI P1-T3 - Synthea-style synthetic extraction-accuracy ground truth
+Reports evaluated: 10
+Expected observations: 49
+Extracted observations: 49
+
+Field accuracy:
+  Test name: 100.00%  (49/49)
+  LOINC    : 100.00%  (49/49)
+  Value    : 100.00%  (49/49)
+  Unit     : 100.00%  (49/49)
+
+Observation accuracy:
+  49/49 = 100.00%
+
+Extraction precision (fully correct / extracted): 100.00%
+Missing observations: 0
+Unexpected (hallucinated) observations: 0
+Target:
+  >= 95.00%
+
+RESULT: PASS
+
+Provenance:
+  Offline: no network access, no OpenRouter API key required
+  PDF stage: tools.pdf_extractor.pdf_to_text() read 10 real PDF file(s)
+  Extraction prompts carrying the extracted PDF text: 10/10
+  LLM calls (deterministic stand-in, zero real calls): 10
+```
+
+### Exact commands (run from the repository root)
+
+```
+python -m venv .venv ; .venv\Scripts\python -m pip install -r requirements.txt pytest
+.venv\Scripts\python tests\evaluation\generate_synthea_reports.py           # (re)write PDFs + manifest
+.venv\Scripts\python tests\evaluation\generate_synthea_reports.py --check   # byte-reproducibility
+.venv\Scripts\python tests\evaluation\run_evaluation.py                     # the evaluation above
+.venv\Scripts\python -m pytest tests\evaluation -q                           # P1-T3 tests
+.venv\Scripts\python -m pytest tests -q                                      # full deterministic suite
+```
+
+### Test results
+
+* `python -m pytest tests/evaluation -q` -> **10 passed** (the 7 required tests plus ground-truth invariants, fixture byte-reproducibility and downstream reference-lookup usability).
+* `python -m pytest tests -q` -> **168 passed, 4 skipped** (baseline before P1-T3 on the same machine: 158 passed, 4 skipped; the 4 skips are the pre-existing gated external tests — nothing regressed).
+* `python tests/evaluation/run_evaluation.py --check-fixtures` -> `OK: 10 report fixtures match the manifest`.
+
+### Extraction failures
+
+None at dataset level: 0 missing, 0 mismatched, 0 unexpected, every field 100%. Failure handling was therefore investigated with the deliberate perturbations in tests 2-5, each of which is reported correctly: a wrong value/unit/LOINC/test name names the exact field (`value: expected 13.4, extracted 13.0`), a dropped row prints `FAIL id=synthea_cmp_0001#4 ... observation missing`, a hallucinated row prints `UNEXPECTED report=synthea_lipid_0003` and turns the run-level result into FAIL, and swapped duplicates are flagged for both occurrences.
+
+### Limitations (honest scope statement)
+
+1. The LLM step is mocked, so the 100% is **not** evidence of live-model accuracy; a live-model run is non-deterministic, requires a key and is not claimed here. The number is a property of the **deterministic evaluation pipeline** run end-to-end (PDF -> text -> schema -> LOINC/unit handling -> comparator), which `run_evaluation.py` reproduces byte-for-byte.
+2. The dataset is deliberately small (10 reports / 49 observations) and hand-authored. Offline access to real Synthea output (FHIR/CSV bundles) was not available, so this is Synthea-*style* data built from the project's own supported-lab vocabulary, not an actual Synthea export.
+3. Only machine-readable (text-layer) PDFs are evaluated. Scanned/image-only reports stay unsupported (P0-T3: OCR out of scope) and are therefore outside the accuracy metric.
+4. Only numeric results are covered — the `ExtractedLabValue` contract has no qualitative values (`<0.5`, `negative`, `trace`).
+5. Matching is occurrence-order based, which is exact for these fixtures but would need a collection-time identity if identical tests were reported out of order.
+6. The prompt's older live-model pipeline samples were not reused as ground truth: they are extractor output, so reusing them would have made the ground truth dependent on extractor behaviour.
+
+### Environment notes (this machine only — no repository changes)
+
+* `openrouter-agent-sdk` v0.8.0 (the `OutputImage` bug documented under "SDK Compatibility") had to be re-patched inside the new virtualenv at `.venv\Lib\site-packages\openrouter_agent\__init__.py`: removed `OutputImage` from the `openrouter.components` import list and aliased `OutputImage = InputImage`. Without it, **no** test in the repository (including the pre-existing ones) can even import. `.venv/` is git-ignored.
+* Everything ran in `c:\MedReportAI\.venv`: Python 3.12.5, pytest 9.1.1, pdfplumber 0.11.10, reportlab 5.0.1, pydantic 2.12.5, openrouter-agent-sdk 0.8.0.
+* This work modified only `tests/evaluation/`, this log and the P1-T3 section of `ROADMAP.md`; no Phase 0 task or P1-T1/P1-T2/P1-T4/P1-T5 status was touched.
+
+---
+
 ## Previous Progress (2026-09-24/25)
 
 ### SDK Compatibility
@@ -651,4 +772,4 @@ No P0 regressions
 5. Verify injection defense works
 6. Verify self-correction works
 7. Test Streamlit UI
-8. Run 3-5 Synthea samples for accuracy number
+8. ~~Run 3-5 Synthea samples for accuracy number~~ — **done in P1-T3**: 10 controlled reports / 49 observations evaluated offline, 49/49 = 100.00% observation accuracy (LLM mocked; see the P1-T3 section for the exact scope statement)

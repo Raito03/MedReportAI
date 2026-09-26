@@ -1,0 +1,673 @@
+{
+  "dataset_name": "MedReportAI P1-T3 - Synthea-style synthetic extraction-accuracy ground truth",
+  "version": "1.0",
+  "created": "2026-09-26",
+  "task": "P1-T3 Synthea Extraction Accuracy Evaluation",
+  "report_files_dir": "synthea_reports",
+  "provenance": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "contains_injection_content": false,
+    "style": "Synthea-style synthetic laboratory observations (test name + LOINC + numeric value + unit), authored by hand for this evaluation.",
+    "independence": "Every expected value in this file was authored independently of the extractor. The report PDFs in synthea_reports/ are RENDERED FROM this file; the evaluator never derives expectations from extractor output, and no expected value was copied from a live or mocked extraction result.",
+    "supported_labs_only": "All test names, LOINC codes and units come from data/supported_labs.json (27 supported laboratory tests). No unsupported LOINC mapping is invented; units are units already understood by data/reference_ranges.json and agents/reference_range.py.",
+    "deterministic": "The whole evaluation is offline: no OpenRouter/LLM/network access is used. The PDFs are generated deterministically (reportlab invariant mode) from this file by tests/evaluation/generate_synthea_reports.py.",
+    "patients": "All patient identities are obvious synthetic placeholders (SYNTHEA-xxx) with synthetic collection dates."
+  },
+  "metric_definition": {
+    "required_fields": ["test_name", "loinc_code", "value", "unit"],
+    "field_accuracy": "(# expected observations whose matched extracted observation has that field equal) / (# expected observations). A missing or unexpected observation can never make a field count as correct.",
+    "observation_accuracy": "(# expected observations where all four required fields match) / (# expected observations). This is the headline extraction-accuracy metric and the value compared against the target.",
+    "extraction_precision": "(# fully correct extracted observations) / (# extracted observations). Reported for visibility; unexpected extra observations lower this value.",
+    "test_name_comparison": "case-insensitive, whitespace-collapsed exact string equality",
+    "loinc_comparison": "exact string equality after whitespace strip",
+    "value_comparison": "numeric (float coercion) with math.isclose(abs_tol=1e-9, rel_tol=0) — 5, 5.0 and 5.00 are equivalent; 13.4 and 13.0 are not",
+    "unit_comparison": "exact after case/whitespace/µ-to-u normalization; otherwise the project's existing unit-conversion table (agents/reference_range.py) may classify the pair as EQUIVALENT (reported separately as a unit-equivalence match, still a match). No new or generic medical conversion is introduced.",
+    "target": 0.95,
+    "pass_rule": "observation_accuracy >= target AND every field accuracy >= target AND unexpected extra observations == 0",
+    "matching_strategy": "deterministic, see tests/evaluation/evaluator.py: (1) identity match on (normalized test name, LOINC) followed by occurrence order within each identity group, (2) diagnostic pairing of leftovers by normalized test name, (3) diagnostic pairing of remaining leftovers by LOINC code, (4) remaining expected observations are MISSING and remaining extracted observations are UNEXPECTED."
+  },
+  "reports": [
+    {
+      "report_id": "synthea_cmp_0001",
+      "panel": "Comprehensive Metabolic Panel",
+      "layout": "columns_no_loinc",
+      "synthetic_patient": "SYNTHEA-0001",
+      "collection_date": "2026-03-11",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Glucose",
+          "loinc_code": "2345-7",
+          "loinc_printed": false,
+          "value": 92.0,
+          "unit": "mg/dL",
+          "printed_value_text": "92",
+          "reference_range_text": "70-100",
+          "note": "normal, integer rendered"
+        },
+        {
+          "order": 2,
+          "test_name": "Sodium",
+          "loinc_code": "2951-2",
+          "loinc_printed": false,
+          "value": 140.0,
+          "unit": "mmol/L",
+          "printed_value_text": "140",
+          "reference_range_text": "135-145",
+          "note": "normal, integer rendered"
+        },
+        {
+          "order": 3,
+          "test_name": "Potassium",
+          "loinc_code": "2823-3",
+          "loinc_printed": false,
+          "value": 4.1,
+          "unit": "mmol/L",
+          "printed_value_text": "4.1",
+          "reference_range_text": "3.7-5.2",
+          "note": "normal, decimal rendered"
+        },
+        {
+          "order": 4,
+          "test_name": "Chloride",
+          "loinc_code": "2075-0",
+          "loinc_printed": false,
+          "value": 102.0,
+          "unit": "mmol/L",
+          "printed_value_text": "102",
+          "reference_range_text": "96-106",
+          "note": "normal, integer rendered"
+        },
+        {
+          "order": 5,
+          "test_name": "Calcium",
+          "loinc_code": "17861-6",
+          "loinc_printed": false,
+          "value": 9.4,
+          "unit": "mg/dL",
+          "printed_value_text": "9.4",
+          "reference_range_text": "8.5-10.2",
+          "note": "normal, decimal rendered"
+        },
+        {
+          "order": 6,
+          "test_name": "Creatinine",
+          "loinc_code": "2160-0",
+          "loinc_printed": false,
+          "value": 0.9,
+          "unit": "mg/dL",
+          "printed_value_text": "0.90",
+          "reference_range_text": "0.6-1.3",
+          "note": "numeric-equivalence case: the PDF prints 0.90, the expected value is 0.9"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_cbc_0002",
+      "panel": "Complete Blood Count",
+      "layout": "columns_with_loinc",
+      "synthetic_patient": "SYNTHEA-0002",
+      "collection_date": "2026-03-12",
+      "specimen": "Whole blood (EDTA)",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Hemoglobin",
+          "loinc_code": "718-7",
+          "loinc_printed": true,
+          "value": 13.4,
+          "unit": "g/dL",
+          "printed_value_text": "13.4",
+          "reference_range_text": "12.0-17.5",
+          "note": "normal"
+        },
+        {
+          "order": 2,
+          "test_name": "Hematocrit",
+          "loinc_code": "4544-3",
+          "loinc_printed": true,
+          "value": 40.2,
+          "unit": "%",
+          "printed_value_text": "40.2",
+          "reference_range_text": "36.0-46.0",
+          "note": "normal, percent unit"
+        },
+        {
+          "order": 3,
+          "test_name": "WBC count",
+          "loinc_code": "6690-2",
+          "loinc_printed": true,
+          "value": 6.5,
+          "unit": "K/uL",
+          "printed_value_text": "6.5",
+          "reference_range_text": "4.5-11.0",
+          "note": "normal, thousand-count abbreviation already understood by agents/reference_range.py"
+        },
+        {
+          "order": 4,
+          "test_name": "RBC count",
+          "loinc_code": "789-8",
+          "loinc_printed": true,
+          "value": 4.85,
+          "unit": "M/uL",
+          "printed_value_text": "4.85",
+          "reference_range_text": "4.20-5.80",
+          "note": "normal, million-count abbreviation already understood by agents/reference_range.py"
+        },
+        {
+          "order": 5,
+          "test_name": "Platelet count",
+          "loinc_code": "777-3",
+          "loinc_printed": true,
+          "value": 250.0,
+          "unit": "K/uL",
+          "printed_value_text": "250",
+          "reference_range_text": "150-400",
+          "note": "normal, integer rendered against a decimal expectation"
+        },
+        {
+          "order": 6,
+          "test_name": "MCV",
+          "loinc_code": "787-2",
+          "loinc_printed": true,
+          "value": 88.6,
+          "unit": "fL",
+          "printed_value_text": "88.6",
+          "reference_range_text": "80.0-100.0",
+          "note": "normal"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_lipid_0003",
+      "panel": "Lipid Panel",
+      "layout": "labelled_lines",
+      "synthetic_patient": "SYNTHEA-0003",
+      "collection_date": "2026-03-14",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Total cholesterol",
+          "loinc_code": "2093-3",
+          "loinc_printed": false,
+          "value": 185.0,
+          "unit": "mg/dL",
+          "printed_value_text": "185",
+          "reference_range_text": "below 200",
+          "note": "normal, integer rendered"
+        },
+        {
+          "order": 2,
+          "test_name": "LDL cholesterol",
+          "loinc_code": "2089-1",
+          "loinc_printed": false,
+          "value": 102.5,
+          "unit": "mg/dL",
+          "printed_value_text": "102.5",
+          "reference_range_text": "below 100",
+          "note": "mildly abnormal (high)"
+        },
+        {
+          "order": 3,
+          "test_name": "HDL cholesterol",
+          "loinc_code": "2085-9",
+          "loinc_printed": false,
+          "value": 48.0,
+          "unit": "mg/dL",
+          "printed_value_text": "48",
+          "reference_range_text": "40-60",
+          "note": "normal, integer rendered"
+        },
+        {
+          "order": 4,
+          "test_name": "Triglycerides",
+          "loinc_code": "2571-8",
+          "loinc_printed": false,
+          "value": 140.0,
+          "unit": "mg/dL",
+          "printed_value_text": "140",
+          "reference_range_text": "below 150",
+          "note": "normal, integer rendered"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_multipage_0004",
+      "panel": "Metabolic Panel (2 pages)",
+      "layout": "multipage",
+      "synthetic_patient": "SYNTHEA-0004",
+      "collection_date": "2026-03-15",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Glucose",
+          "loinc_code": "2345-7",
+          "loinc_printed": false,
+          "value": 145.0,
+          "unit": "mg/dL",
+          "printed_value_text": "145",
+          "reference_range_text": "70-100",
+          "note": "abnormal (high), page 1"
+        },
+        {
+          "order": 2,
+          "test_name": "Hemoglobin A1c",
+          "loinc_code": "4548-4",
+          "loinc_printed": false,
+          "value": 7.2,
+          "unit": "%",
+          "printed_value_text": "7.2",
+          "reference_range_text": "4.0-5.6",
+          "note": "abnormal (high), page 1"
+        },
+        {
+          "order": 3,
+          "test_name": "BUN",
+          "loinc_code": "3094-0",
+          "loinc_printed": false,
+          "value": 28.0,
+          "unit": "mg/dL",
+          "printed_value_text": "28",
+          "reference_range_text": "6-20",
+          "note": "abnormal (high), page 2"
+        },
+        {
+          "order": 4,
+          "test_name": "Creatinine",
+          "loinc_code": "2160-0",
+          "loinc_printed": false,
+          "value": 1.8,
+          "unit": "mg/dL",
+          "printed_value_text": "1.8",
+          "reference_range_text": "0.6-1.3",
+          "note": "abnormal (high), page 2"
+        },
+        {
+          "order": 5,
+          "test_name": "ALT",
+          "loinc_code": "1742-6",
+          "loinc_printed": false,
+          "value": 62.0,
+          "unit": "U/L",
+          "printed_value_text": "62",
+          "reference_range_text": "4-56",
+          "note": "abnormal (high), page 2"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_duplicates_0005",
+      "panel": "Electrolytes (repeat draw)",
+      "layout": "duplicate_rows",
+      "synthetic_patient": "SYNTHEA-0005",
+      "collection_date": "2026-03-16",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Potassium",
+          "loinc_code": "2823-3",
+          "loinc_printed": true,
+          "value": 4.1,
+          "unit": "mmol/L",
+          "printed_value_text": "4.1",
+          "reference_range_text": "3.7-5.2",
+          "pdf_row_label": "Draw 1 (08:00)",
+          "note": "DUPLICATE TEST NAME #1 (first draw) — must not be crossed with the repeat draw"
+        },
+        {
+          "order": 2,
+          "test_name": "Potassium",
+          "loinc_code": "2823-3",
+          "loinc_printed": true,
+          "value": 3.9,
+          "unit": "mmol/L",
+          "printed_value_text": "3.9",
+          "reference_range_text": "3.7-5.2",
+          "pdf_row_label": "Draw 2 (14:30)",
+          "note": "DUPLICATE TEST NAME #2 (repeat draw; slightly hemolyzed sample) — occurrence order keeps the two rows apart"
+        },
+        {
+          "order": 3,
+          "test_name": "Sodium",
+          "loinc_code": "2951-2",
+          "loinc_printed": true,
+          "value": 138.0,
+          "unit": "mmol/L",
+          "printed_value_text": "138",
+          "reference_range_text": "135-145",
+          "note": "normal"
+        },
+        {
+          "order": 4,
+          "test_name": "Carbon dioxide (total)",
+          "loinc_code": "2028-9",
+          "loinc_printed": true,
+          "value": 26.0,
+          "unit": "mmol/L",
+          "printed_value_text": "26",
+          "reference_range_text": "23-29",
+          "note": "normal, test name contains parentheses (must survive PDF text extraction)"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_hepatic_0006",
+      "panel": "Hepatic Function Panel",
+      "layout": "columns_with_loinc",
+      "synthetic_patient": "SYNTHEA-0006",
+      "collection_date": "2026-03-18",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "ALT",
+          "loinc_code": "1742-6",
+          "loinc_printed": true,
+          "value": 28.0,
+          "unit": "U/L",
+          "printed_value_text": "28",
+          "reference_range_text": "4-56",
+          "note": "normal, short test name"
+        },
+        {
+          "order": 2,
+          "test_name": "AST",
+          "loinc_code": "1920-8",
+          "loinc_printed": true,
+          "value": 25.0,
+          "unit": "U/L",
+          "printed_value_text": "25",
+          "reference_range_text": "8-33",
+          "note": "normal, short test name"
+        },
+        {
+          "order": 3,
+          "test_name": "Alkaline phosphatase",
+          "loinc_code": "6768-6",
+          "loinc_printed": true,
+          "value": 74.0,
+          "unit": "U/L",
+          "printed_value_text": "74",
+          "reference_range_text": "20-140",
+          "note": "normal, multi-word test name"
+        },
+        {
+          "order": 4,
+          "test_name": "Total bilirubin",
+          "loinc_code": "1975-2",
+          "loinc_printed": true,
+          "value": 0.8,
+          "unit": "mg/dL",
+          "printed_value_text": "0.8",
+          "reference_range_text": "0.1-1.2",
+          "note": "normal, decimal rendered"
+        },
+        {
+          "order": 5,
+          "test_name": "Albumin",
+          "loinc_code": "1751-7",
+          "loinc_printed": true,
+          "value": 4.3,
+          "unit": "g/dL",
+          "printed_value_text": "4.30",
+          "reference_range_text": "3.4-5.4",
+          "note": "numeric-equivalence case: the PDF prints 4.30, the expected value is 4.3"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_cbc_0007",
+      "panel": "Complete Blood Count (canonical multi-word unit)",
+      "layout": "columns_no_loinc",
+      "synthetic_patient": "SYNTHEA-0007",
+      "collection_date": "2026-03-19",
+      "specimen": "Whole blood (EDTA)",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "WBC count",
+          "loinc_code": "6690-2",
+          "loinc_printed": false,
+          "value": 11.2,
+          "unit": "K/uL",
+          "printed_value_text": "11.2",
+          "reference_range_text": "4.5-11.0",
+          "note": "abnormal (high) — mild leukocytosis"
+        },
+        {
+          "order": 2,
+          "test_name": "RBC count",
+          "loinc_code": "789-8",
+          "loinc_printed": false,
+          "value": 4.2,
+          "unit": "million cells/mcL",
+          "printed_value_text": "4.20",
+          "reference_range_text": "4.20-5.80",
+          "note": "unit is printed as the project's canonical multi-word unit; numeric-equivalence case (4.20 vs 4.2)"
+        },
+        {
+          "order": 3,
+          "test_name": "Hemoglobin",
+          "loinc_code": "718-7",
+          "loinc_printed": false,
+          "value": 12.1,
+          "unit": "g/dL",
+          "printed_value_text": "12.1",
+          "reference_range_text": "12.0-17.5",
+          "note": "borderline low"
+        },
+        {
+          "order": 4,
+          "test_name": "MCH",
+          "loinc_code": "785-6",
+          "loinc_printed": false,
+          "value": 27.1,
+          "unit": "pg/cell",
+          "printed_value_text": "27.1",
+          "reference_range_text": "26.0-33.0",
+          "note": "normal"
+        },
+        {
+          "order": 5,
+          "test_name": "MCHC",
+          "loinc_code": "786-4",
+          "loinc_printed": false,
+          "value": 33.9,
+          "unit": "g/dL",
+          "printed_value_text": "33.9",
+          "reference_range_text": "31.0-36.0",
+          "note": "normal"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_proteins_0008",
+      "panel": "Protein / Hemoglobin Panel (wide column spacing)",
+      "layout": "wide_spacing",
+      "synthetic_patient": "SYNTHEA-0008",
+      "collection_date": "2026-03-20",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Total protein",
+          "loinc_code": "2885-2",
+          "loinc_printed": false,
+          "value": 7.1,
+          "unit": "g/dL",
+          "printed_value_text": "7.1",
+          "reference_range_text": "6.0-8.3",
+          "note": "normal"
+        },
+        {
+          "order": 2,
+          "test_name": "Albumin",
+          "loinc_code": "1751-7",
+          "loinc_printed": false,
+          "value": 4.5,
+          "unit": "g/dL",
+          "printed_value_text": "4.5",
+          "reference_range_text": "3.4-5.4",
+          "note": "normal"
+        },
+        {
+          "order": 3,
+          "test_name": "MCH",
+          "loinc_code": "785-6",
+          "loinc_printed": false,
+          "value": 28.5,
+          "unit": "pg/cell",
+          "printed_value_text": "28.5",
+          "reference_range_text": "26.0-33.0",
+          "note": "normal"
+        },
+        {
+          "order": 4,
+          "test_name": "MCHC",
+          "loinc_code": "786-4",
+          "loinc_printed": false,
+          "value": 32.6,
+          "unit": "g/dL",
+          "printed_value_text": "32.6",
+          "reference_range_text": "31.0-36.0",
+          "note": "normal"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_ruled_0009",
+      "panel": "Glucose and Lipid Screen (ruled table)",
+      "layout": "ruled_table",
+      "synthetic_patient": "SYNTHEA-0009",
+      "collection_date": "2026-03-21",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Glucose",
+          "loinc_code": "2345-7",
+          "loinc_printed": true,
+          "value": 88.0,
+          "unit": "mg/dL",
+          "printed_value_text": "88",
+          "reference_range_text": "70-100",
+          "note": "normal, integer rendered inside a ruled table cell"
+        },
+        {
+          "order": 2,
+          "test_name": "Hemoglobin A1c",
+          "loinc_code": "4548-4",
+          "loinc_printed": true,
+          "value": 5.1,
+          "unit": "%",
+          "printed_value_text": "5.1",
+          "reference_range_text": "4.0-5.6",
+          "note": "normal"
+        },
+        {
+          "order": 3,
+          "test_name": "Total cholesterol",
+          "loinc_code": "2093-3",
+          "loinc_printed": true,
+          "value": 172.0,
+          "unit": "mg/dL",
+          "printed_value_text": "172",
+          "reference_range_text": "below 200",
+          "note": "normal"
+        },
+        {
+          "order": 4,
+          "test_name": "HDL cholesterol",
+          "loinc_code": "2085-9",
+          "loinc_printed": true,
+          "value": 55.0,
+          "unit": "mg/dL",
+          "printed_value_text": "55",
+          "reference_range_text": "40-60",
+          "note": "normal"
+        },
+        {
+          "order": 5,
+          "test_name": "Triglycerides",
+          "loinc_code": "2571-8",
+          "loinc_printed": true,
+          "value": 118.0,
+          "unit": "mg/dL",
+          "printed_value_text": "118",
+          "reference_range_text": "below 150",
+          "note": "normal"
+        }
+      ]
+    },
+    {
+      "report_id": "synthea_full_0010",
+      "panel": "Chemistry Panel (2 pages, LOINC label prefix)",
+      "layout": "multipage_loinc",
+      "synthetic_patient": "SYNTHEA-0010",
+      "collection_date": "2026-03-23",
+      "specimen": "Serum",
+      "expected_observations": [
+        {
+          "order": 1,
+          "test_name": "Sodium",
+          "loinc_code": "2951-2",
+          "loinc_printed": true,
+          "value": 136.0,
+          "unit": "mmol/L",
+          "printed_value_text": "136",
+          "reference_range_text": "135-145",
+          "note": "normal, page 1, LOINC rendered with an explicit LOINC: label"
+        },
+        {
+          "order": 2,
+          "test_name": "Potassium",
+          "loinc_code": "2823-3",
+          "loinc_printed": true,
+          "value": 5.3,
+          "unit": "mmol/L",
+          "printed_value_text": "5.3",
+          "reference_range_text": "3.7-5.2",
+          "note": "abnormal (high), page 1"
+        },
+        {
+          "order": 3,
+          "test_name": "Chloride",
+          "loinc_code": "2075-0",
+          "loinc_printed": true,
+          "value": 99.0,
+          "unit": "mmol/L",
+          "printed_value_text": "99",
+          "reference_range_text": "96-106",
+          "note": "normal, page 2"
+        },
+        {
+          "order": 4,
+          "test_name": "Calcium",
+          "loinc_code": "17861-6",
+          "loinc_printed": true,
+          "value": 10.5,
+          "unit": "mg/dL",
+          "printed_value_text": "10.5",
+          "reference_range_text": "8.5-10.2",
+          "note": "abnormal (high), page 2"
+        },
+        {
+          "order": 5,
+          "test_name": "Creatinine",
+          "loinc_code": "2160-0",
+          "loinc_printed": true,
+          "value": 1.2,
+          "unit": "mg/dL",
+          "printed_value_text": "1.20",
+          "reference_range_text": "0.6-1.3",
+          "note": "numeric-equivalence case (1.20 vs 1.2), page 2"
+        }
+      ]
+    }
+  ]
+}

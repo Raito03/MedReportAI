@@ -1,0 +1,2 @@
+# Binary fixtures must never be line-ending normalized.
+*.pdf binary
