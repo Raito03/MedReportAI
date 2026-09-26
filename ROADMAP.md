@@ -349,6 +349,8 @@ Prove the required agentic demo moments, quantify extraction quality, harden fai
 
 ## P1-T2 — Verifier Self-Correction Demo
 
+**Status: DONE**
+
 **Owner:** Agent / Orchestration
 
 Desired flow:
@@ -357,16 +359,16 @@ Desired flow:
 
 **Subtasks:**
 
-* Confirm verifier detects prohibited diagnostic language
-* Pass `issues_found` explicitly into correction prompt
-* Regenerate affected explanation/output
-* Re-run verifier after correction
-* Bound retries using `MAX_RETRIES`
-* Prevent infinite correction loops
-* Preserve original structured lab data
-* Test successful correction
-* Test exhausted retries / controlled failure
-* Capture reproducible demo case
+* [x] Confirm verifier detects prohibited diagnostic language
+* [x] Pass `issues_found` explicitly into correction prompt
+* [x] Regenerate affected explanation/output
+* [x] Re-run verifier after correction
+* [x] Bound retries using `MAX_RETRIES`
+* [x] Prevent infinite correction loops
+* [x] Preserve original structured lab data
+* [x] Test successful correction
+* [x] Test exhausted retries / controlled failure
+* [x] Capture reproducible demo case
 
 **Dependency:** Phase 0 integration gate
 
@@ -375,6 +377,15 @@ Desired flow:
 **Exit criterion:**
 
 > Verifier → issues → targeted correction → re-verification works reliably enough for the demo.
+
+**Completion notes (2026-09-26):**
+
+* Orchestrator passes `verification.issues_found` to `explain(correction_issues=...)`
+* Bounded retry: `MAX_RETRIES = 1` → 1 correction attempt, 2 generation attempts total
+* Correction prompt restates safety rules (never relaxes)
+* 5 deterministic E2E tests: success path, persistent failure, retry-limit bounds (0, 1, 2), safety invariants
+* P0-T6 citation grounding preserved — LLM cannot invent/modify citations
+* Deterministic real-orchestrator verification complete; live OpenRouter demonstration remains separately gated (requires OpenRouter quota)
 
 ---
 
@@ -537,7 +548,7 @@ Additionally:
 Run these in parallel:
 
 * [ ] P1-T1
-* [ ] P1-T2
+* [x] P1-T2 — Verifier Self-Correction Demo
 * [ ] Continue P1-T3
 * [x] P1-T4 — Failure Handling + Observability
 

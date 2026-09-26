@@ -552,8 +552,8 @@ The 4 skips are the pre-existing gated external tests (3 OpenRouter integration 
 - [x] Unit abbreviations recognized as equivalent
 - [x] Sex-specific ranges handled without guessing
 - [ ] Two required demo moments work reliably — NOT YET TESTED
-  - [ ] Injection defense demo
-  - [ ] Self-correction demo
+  - [ ] Injection defense demo — deterministic tests pass; live 5-run acceptance pending quota
+  - [ ] Self-correction demo — deterministic tests pass; live demonstration not yet run
 
 ---
 
