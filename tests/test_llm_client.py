@@ -1,13 +1,20 @@
-"""OpenRouter Agent SDK connectivity + tool-calling test.
+"""OpenRouter Agent SDK connectivity + tool-calling tests — Mode B (integration).
 
-DAY 1 BLOCKER — run this first. All LLM work depends on it passing.
-Tests call_model() from openrouter-agent-sdk.
+These tests make REAL OpenRouter API calls and are therefore explicitly gated:
+
+* Normal pytest run: skipped automatically — they never run accidentally.
+* Opt in:  OPENROUTER_RUN_INTEGRATION=1 pytest -q tests/test_llm_client.py
+* Direct run (also explicit):  python tests/test_llm_client.py
+
+Requires OPENROUTER_API_KEY; skips clearly when it is not configured.
+The API key is never printed or included in any assertion message.
 """
 
 import asyncio
-import json
 import sys
 import os
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -15,6 +22,14 @@ from core.config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 from core.llm_client import get_client
 from openrouter_agent import call_model, step_count_is, tool
 from pydantic import BaseModel
+
+RUN_INTEGRATION = os.getenv("OPENROUTER_RUN_INTEGRATION", "").lower() in ("1", "true", "yes")
+
+pytestmark = pytest.mark.skipif(
+    not RUN_INTEGRATION,
+    reason="OpenRouter integration test — set OPENROUTER_RUN_INTEGRATION=1 to run "
+           "(requires OPENROUTER_API_KEY)",
+)
 
 
 class DummyInput(BaseModel):
@@ -35,7 +50,7 @@ dummy_tool = tool(
 )
 
 
-async def test_basic_chat():
+async def _basic_chat():
     """Send a simple message, get a response via call_model()."""
     if not OPENROUTER_API_KEY:
         print("SKIP: No OPENROUTER_API_KEY set in .env")
@@ -59,7 +74,7 @@ async def test_basic_chat():
     return True
 
 
-async def test_tool_calling():
+async def _tool_calling():
     """Test tool calling with call_model() + a dummy tool."""
     if not OPENROUTER_API_KEY:
         print("SKIP: No OPENROUTER_API_KEY set in .env")
@@ -82,6 +97,20 @@ async def test_tool_calling():
     return True
 
 
+def test_basic_chat():
+    """Mode B: simple chat against the real OpenRouter API."""
+    if not OPENROUTER_API_KEY:
+        pytest.skip("SKIPPED: OPENROUTER_API_KEY is not configured")
+    assert asyncio.run(_basic_chat()) is True
+
+
+def test_tool_calling():
+    """Mode B: tool-calling loop against the real OpenRouter API."""
+    if not OPENROUTER_API_KEY:
+        pytest.skip("SKIPPED: OPENROUTER_API_KEY is not configured")
+    assert asyncio.run(_tool_calling()) is True
+
+
 if __name__ == "__main__":
     print("=== OpenRouter Agent SDK Validation Test ===")
     print(f"API key set: {'yes' if OPENROUTER_API_KEY else 'NO'}")
@@ -89,8 +118,8 @@ if __name__ == "__main__":
 
     async def run_all():
         results = []
-        results.append(("basic_chat", await test_basic_chat()))
-        results.append(("tool_calling", await test_tool_calling()))
+        results.append(("basic_chat", await _basic_chat()))
+        results.append(("tool_calling", await _tool_calling()))
 
         print("\n--- Results ---")
         all_pass = True
