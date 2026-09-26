@@ -373,6 +373,56 @@ Baseline before P0-T6: 104 passed, 2 skipped. P0-T6 alone added 16 tests → 120
 
 ---
 
+## P0-T7 — Phase 0 Integration Gate (2026-09-26)
+
+**Status: DONE / LOCKED** — all acceptance criteria verified by the test results below.
+
+### What was verified
+
+* Full deterministic test suite: **168 passed, 4 skipped** (skips are gated external tests: OpenRouter integration + MedlinePlus live)
+* OpenRouter integration tests: **3 passed** (basic_chat, tool_calling, structured_output)
+* Sample PDFs verified: all three PDFs extract correctly (normal: 552 chars, abnormal: 555 chars, injection: 690 chars)
+* Task 1 regression verified: no changes to locked P0-T1 contracts
+* P0-T7 integration gate test file: `tests/test_p0_t7_integration_gate.py` (comprehensive E2E with FakeLLM + controlled MedlinePlus boundary)
+
+### Test results
+
+```text
+$ python -m pytest -q
+168 passed, 4 skipped in 7.69s                  (EXIT=0)
+
+$ OPENROUTER_RUN_INTEGRATION=1 python -m pytest tests/test_llm_client.py tests/integration/ -q
+3 passed in 9.88s                               (EXIT=0)
+```
+
+### Sample PDF verification
+
+* `data/samples/normal_report.pdf`: 552 chars extracted, contains Glucose/Creatinine/Hemoglobin values
+* `data/samples/abnormal_report.pdf`: 555 chars extracted, contains abnormal values
+* `data/samples/injection_attack.pdf`: 690 chars extracted, contains embedded instructions (treated as untrusted data)
+
+### Task 1 regression status
+
+* No changes to locked P0-T1 contracts
+* Unknown LOINC → controlled `unavailable` (not `0–0`)
+* Unavailable reference ranges remain unavailable
+* `unavailable` is not classified as normal/mildly_abnormal/critical
+* Sex-specific ranges not guessed
+* Unit mismatch remains unavailable
+* Supported unit conversions still work
+* LLM not used to invent reference ranges
+* Risk flagging only classifies values with valid reference ranges
+
+### Phase 0 completion/lock status
+
+Phase 0 Status: **COMPLETE / LOCKED**
+
+P0-T1 through P0-T7 have been implemented and verified. The Phase 0 foundation is now locked for Phase 1 demo/evaluation work.
+
+Future changes should not modify the locked reference-range safety contract or Phase 0 architecture unless a regression or explicitly approved scope change requires it.
+
+---
+
 ## Previous Progress (2026-09-24/25)
 
 ### SDK Compatibility

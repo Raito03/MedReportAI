@@ -276,27 +276,40 @@ Mode B integration tests (see below).
 
 ## P0-T7 — Phase 0 Integration Gate
 
+**Status: DONE / LOCKED**
+
+**Commit:** `77f5130`
+
 **Owner:** Tech Lead / Integrator
 
 **Dependencies:** P0-T2, P0-T3, P0-T4, P0-T5, P0-T6
 
 **Subtasks:**
 
-* Merge/verify P0-T2 through P0-T6
-* Run deterministic tests
-* Run OpenRouter integration tests separately
-* Run normal sample PDF
-* Run abnormal sample PDF
-* Run injection sample PDF
-* Confirm no Task 1 regression
-* Update `PROGRESS.md`
-* Record exact test counts
-* Record known external blockers
-* Commit/lock Phase 0
+* [x] Merge/verify P0-T2 through P0-T6
+* [x] Run deterministic tests (168 passed, 4 skipped)
+* [x] Run OpenRouter integration tests separately (3 passed)
+* [x] Run normal sample PDF (extraction verified)
+* [x] Run abnormal sample PDF (extraction verified)
+* [x] Run injection sample PDF (extraction verified)
+* [x] Confirm no Task 1 regression
+* [x] Update `PROGRESS.md`
+* [x] Record exact test counts
+* [x] Record known external blockers
+* [x] Commit/lock Phase 0
 
 **Exit criterion:**
 
 > Foundation is stable enough for Phase 1 demo/evaluation work.
+
+**Completion notes (2026-09-26):**
+
+* Full deterministic test suite: **168 passed, 4 skipped** (skips are gated external tests: OpenRouter integration + MedlinePlus live)
+* OpenRouter integration tests: **3 passed** (basic_chat, tool_calling, structured_output)
+* Sample PDFs verified: all three PDFs extract correctly (normal: 552 chars, abnormal: 555 chars, injection: 690 chars)
+* Task 1 regression verified: no changes to locked P0-T1 contracts
+* P0-T7 integration gate test file: `tests/test_p0_t7_integration_gate.py` (comprehensive E2E with FakeLLM + controlled MedlinePlus boundary)
+* Phase 0 is now locked for Phase 1 demo/evaluation work
 
 ---
 
@@ -517,7 +530,7 @@ Run these in parallel:
 
 ## Wave 3 — Final integration
 
-* [ ] P0-T7
+* [x] P0-T7 — Phase 0 Integration Gate (`77f5130`)
 * [ ] P1-T5
 
 ---
