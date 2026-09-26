@@ -114,6 +114,10 @@ Make the pipeline's foundations deterministic, safe, testable, and ready for Pha
 
 ## P0-T4 — Agent Seam / Schema Integration Tests
 
+**Status: DONE**
+
+**Commits:** `96f7820`, `f108175`
+
 **Owner:** Backend / Testing
 
 Test these boundaries:
@@ -122,17 +126,17 @@ Test these boundaries:
 
 **Subtasks:**
 
-* Test extraction → reference lookup
-* Test reference lookup → risk flagger
-* Test risk flagger → explainer
-* Test explainer → verifier
-* Test exact Pydantic schemas at every boundary
-* Test malformed LLM output
-* Test missing fields
-* Test extra fields
-* Test invalid status values
-* Test empty lab-value lists
-* Test unavailable values through the complete non-LLM path
+* [x] Test extraction → reference lookup
+* [x] Test reference lookup → risk flagger
+* [x] Test risk flagger → explainer
+* [x] Test explainer → verifier
+* [x] Test exact Pydantic schemas at every boundary
+* [x] Test malformed LLM output
+* [x] Test missing fields
+* [x] Test extra fields
+* [x] Test invalid status values
+* [x] Test empty lab-value lists
+* [x] Test unavailable values through the complete non-LLM path
 
 **Dependency:** P0-T1
 
@@ -141,6 +145,17 @@ Test these boundaries:
 **Exit criterion:**
 
 > Every agent boundary rejects or safely handles invalid data without silently changing semantics.
+
+**Completion notes (2026-09-26):**
+
+* `tests/test_p0_t4_seam_tests.py`: 32 deterministic, offline seam tests — all LLM/citation/PDF seams mocked where reached, no API key or network required
+* Two seam bugs found and fixed, each demonstrated with a failing test first:
+  * `agents/verifier.py` — malformed LLM verifier output (missing `issues_found`, wrong types, or `passed=false` without details) now fails closed instead of silently approving
+  * `agents/explainer.py` — `explain([])` short-circuits without calling the LLM, so zero values can never produce invented explanations
+* Covered: serialization round-trips, wrong-schema crossings, extra-field isolation, LOINC/value/unit identity preservation, unavailable propagation through every seam, mixed-batch cross-contamination, empty inputs, full orchestrator E2E (LLMs mocked), and upstream failure propagation
+* Deterministic suite: 92/92 passing; P0-T1, P0-T2, P0-T3 unchanged and passing
+
+> P0-T4 behavior must remain locked unless a later task demonstrates a concrete regression.
 
 ---
 
@@ -437,7 +452,7 @@ Run these in parallel:
 
 * [x] P0-T2 — Reference-Range Safety Consumer Audit (`25d85bf`, `dea0a93`)
 * [ ] P0-T3
-* [ ] P0-T4
+* [x] P0-T4 — Agent Seam / Schema Integration Tests (`96f7820`, `f108175`)
 * [ ] P0-T5
 * [ ] P0-T6
 
