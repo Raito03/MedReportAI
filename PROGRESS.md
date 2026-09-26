@@ -1,7 +1,7 @@
 # Progress Log — Lab Report Explainer Agent
 
 ## Current Status
-Task 1 complete + hardened. Production reference data integrated. MedlinePlus Connect integrated. 40 unit tests pass (24 reference range, 6 schema, 10 MedlinePlus). Unit conversion and unavailable-range propagation fixed. E2E pipeline steps 1-4 verified on normal_report.pdf (explanation step rate-limited).
+Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Literal`). 43 unit tests pass (24 reference range, 9 schema, 10 MedlinePlus). Unit conversion, unavailable-range propagation, and risk flagger guard all verified. E2E non-LLM path verified end-to-end.
 
 ---
 
@@ -109,6 +109,39 @@ Total: 40 passed in 2.15s
 
 ---
 
+## Task 1 Lock (2026-09-26)
+
+### Schema Contract Fix
+
+**Problem:** `RiskFlaggedValue.status` was documented as `str  # "normal" | "mildly_abnormal" | "critical"` but the risk flagger legitimately returns `"unavailable"` when no valid reference range exists.
+
+**Fix:** Changed `status` field to `Literal["normal", "mildly_abnormal", "critical", "unavailable"]`. The schema now explicitly permits exactly the statuses the implementation can return.
+
+**Docstring clarification:** `unavailable` means "No valid applicable reference range was available, so no range-based risk classification was performed." It does NOT mean the value is abnormal or critical.
+
+### Verification Results
+
+- **Unknown LOINC** → `reference_low=None, reference_high=None, range_available=False` → `status="unavailable"` ✓
+- **Missing population context** → same unavailable path ✓
+- **Unit mismatch (mmol/L vs mg/dL)** → `range_available=False`, no generic conversion ✓
+- **Unit conversion (K/uL → cells/mcL)** → 7 K/uL → 7000 cells/mcL → in_range=True ✓
+- **Risk flagger guard** → unavailable values NOT sent to LLM for range classification ✓
+- **Schema validation** → `Literal` rejects invalid status values (e.g. "severe") ✓
+- **MedlinePlus integration** → unchanged, all behaviors preserved ✓
+
+### Test Results (post-lock)
+
+```
+tests/test_reference_range.py 24 passed
+tests/test_schemas.py          9 passed  (was 6, added 3 for unavailable status)
+tests/test_medlineplus.py     10 passed
+Total: 43 passed in 1.94s
+```
+
+(2 pre-existing async failures in test_llm_client.py — unrelated to Task 1)
+
+---
+
 ## Task 1 Completion Summary (2026-09-26)
 
 ### What Changed
@@ -156,10 +189,10 @@ Total: 40 passed in 2.15s
 ### Test Results
 
 ```
-tests/test_schemas.py          6 passed
-tests/test_reference_range.py 15 passed
+tests/test_schemas.py          9 passed  (includes unavailable status tests)
+tests/test_reference_range.py 24 passed
 tests/test_medlineplus.py     10 passed
-Total: 31 passed in 1.94s
+Total: 43 passed in 1.94s
 ```
 
 ### Remaining NHANES Work

@@ -1,7 +1,7 @@
 """Pydantic models — Section 5 of PROJECT.md. All agent I/O conforms to these."""
 
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 
 class ExtractedLabValue(BaseModel):
@@ -25,12 +25,21 @@ class RangeCheckedValue(BaseModel):
 
 
 class RiskFlaggedValue(BaseModel):
-    """Output of Risk Flagging Agent."""
+    """Output of Risk Flagging Agent.
+
+    Status values:
+    - "normal": value within reference range
+    - "mildly_abnormal": value slightly outside range
+    - "critical": value far outside range
+    - "unavailable": no valid applicable reference range; no range-based
+      classification was performed. This does NOT mean the value is
+      abnormal or critical — the system simply cannot assess it.
+    """
     test_name: str
     loinc_code: str = ""  # Threaded from extraction for citation lookup
     value: float
     unit: str
-    status: str  # "normal" | "mildly_abnormal" | "critical"
+    status: Literal["normal", "mildly_abnormal", "critical", "unavailable"]
     reasoning: str
 
 

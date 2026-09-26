@@ -1,5 +1,7 @@
 """Schema validation tests — all Pydantic models accept correct data, reject bad."""
 
+import pytest
+from pydantic import ValidationError
 from core.schemas import (
     ExtractedLabValue,
     RangeCheckedValue,
@@ -31,6 +33,35 @@ def test_risk_flagged_value():
     assert v.status == "normal"
 
 
+def test_risk_flagged_value_unavailable():
+    """status='unavailable' is valid and means no range-based classification was performed."""
+    v = RiskFlaggedValue(
+        test_name="Hemoglobin", value=14.0, unit="g/dL",
+        status="unavailable",
+        reasoning="Cannot classify: Sex-specific ranges available but patient sex not provided",
+    )
+    assert v.status == "unavailable"
+
+
+def test_risk_flagged_value_all_statuses():
+    """All four valid statuses are accepted."""
+    for status in ("normal", "mildly_abnormal", "critical", "unavailable"):
+        v = RiskFlaggedValue(
+            test_name="Test", value=1.0, unit="U",
+            status=status, reasoning="test",
+        )
+        assert v.status == status
+
+
+def test_risk_flagged_value_rejects_invalid_status():
+    """Invalid status values are rejected by the Literal constraint."""
+    with pytest.raises(ValidationError):
+        RiskFlaggedValue(
+            test_name="Test", value=1.0, unit="U",
+            status="severe", reasoning="test",
+        )
+
+
 def test_final_explanation():
     e = FinalExplanation(
         test_name="Glucose",
@@ -59,6 +90,9 @@ if __name__ == "__main__":
     test_extracted_lab_value()
     test_range_checked_value()
     test_risk_flagged_value()
+    test_risk_flagged_value_unavailable()
+    test_risk_flagged_value_all_statuses()
+    test_risk_flagged_value_rejects_invalid_status()
     test_final_explanation()
     test_verifier_result_pass()
     test_verifier_result_fail()
