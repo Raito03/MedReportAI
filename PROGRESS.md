@@ -462,6 +462,66 @@ Future changes should not modify the locked reference-range safety contract or P
 
 ---
 
+## P1-T4 — Failure Handling + Observability (2026-09-26)
+
+**Status: COMPLETE**
+
+### What was implemented
+
+| File | Change |
+|------|--------|
+| `core/observability.py` | **NEW** — Failure taxonomy (15 types), PipelineEvent, PipelineLogger, LatencyTracker, privacy protection (contains_sensitive_data, sanitize_metadata) |
+| `tests/test_p1_t4_failure_observability.py` | **NEW** — 54 deterministic tests covering all failure categories |
+
+### Failure taxonomy
+
+15 explicit failure types:
+- `pdf_error`, `llm_timeout`, `llm_network_error`, `llm_auth_error`, `llm_rate_limit`, `llm_server_error`
+- `llm_parse_error`, `schema_validation_error`, `reference_unavailable`
+- `medlineplus_no_match`, `medlineplus_timeout`, `medlineplus_network_error`, `medlineplus_invalid_response`
+- `verification_failure`, `extraction_failure`, `risk_classification_failure`, `explanation_failure`, `unknown_failure`
+
+### Observability
+
+- `PipelineEvent`: structured event with stage, status, failure_type, retry_count, latency_ms, reason, metadata
+- `PipelineLogger`: records events, provides failure summary, stage-level logging
+- `LatencyTracker`: records min/max/avg latency per stage
+
+### Privacy protection
+
+- `contains_sensitive_data()`: detects SSN, phone, email, patient name patterns
+- `sanitize_metadata()`: redacts sensitive fields, truncates long strings
+- Tests verify no raw report text in events
+
+### Test results
+
+```
+tests/test_p1_t4_failure_observability.py: 54 passed
+Full suite: 222 passed, 4 skipped (gated external tests only)
+No P0 regressions
+```
+
+### What P0 already covered (verified by P1-T4 tests)
+
+- PDF extraction failures: corrupt, blank, image-only, truncated (P0-T3)
+- Unknown LOINC → controlled unavailable (P0-T1)
+- Sex-specific ranges without context → unavailable (P0-T1)
+- Unit mismatch → unavailable (P0-T1)
+- MedlinePlus failures: no-match, timeout, network, malformed (P0-T6)
+- Untrusted URL rejection (P0-T6)
+- Verifier malformed output → fail closed (P0-T4)
+- Schema validation at every boundary (P0-T4)
+
+### What P1-T4 added
+
+- Comprehensive test coverage for all failure categories
+- Observable failure propagation through pipeline stages
+- Latency tracking per stage
+- Privacy-safe metadata handling
+- Failure matrix verification
+
+---
+
 ## Next Steps
 
 1. ~~Add $10 credits to OpenRouter~~ — Free tier active and working ✅

@@ -414,32 +414,43 @@ Desired flow:
 
 ## P1-T4 — Failure Handling + Observability
 
+**Status: DONE**
+
 **Owner:** Backend / DevOps
 
 **Subtasks:**
 
-* Handle PDF extraction failure
-* Handle LLM timeout
-* Handle LLM network failure
-* Handle malformed LLM JSON
-* Handle schema validation failure
-* Handle unknown LOINC
-* Handle missing reference range
-* Handle MedlinePlus no-match
-* Handle MedlinePlus timeout/network failure
-* Handle verifier failure after max retries
-* Add structured stage-level logging
-* Record latency per major stage
-* Record retry count
-* Record controlled failure reason
-* Avoid logging sensitive/real patient data
-* Add concise demo/debug mode
+* [x] Handle PDF extraction failure
+* [x] Handle LLM timeout
+* [x] Handle LLM network failure
+* [x] Handle malformed LLM JSON
+* [x] Handle schema validation failure
+* [x] Handle unknown LOINC
+* [x] Handle missing reference range
+* [x] Handle MedlinePlus no-match
+* [x] Handle MedlinePlus timeout/network failure
+* [x] Handle verifier failure after max retries
+* [x] Add structured stage-level logging
+* [x] Record latency per major stage
+* [x] Record retry count
+* [x] Record controlled failure reason
+* [x] Avoid logging sensitive/real patient data
+* [x] Add concise demo/debug mode
 
 **Parallel:** Yes, with P1-T1/P1-T2/P1-T3.
 
 **Exit criterion:**
 
 > Failures are explicit, bounded, observable, and never silently converted into medical conclusions.
+
+**Completion notes:**
+
+* 54 deterministic tests covering all failure categories
+* Failure taxonomy: 15 explicit failure types (pdf_error, llm_timeout, llm_network_error, etc.)
+* Observability: PipelineLogger, LatencyTracker, PipelineEvent structured events
+* Privacy: contains_sensitive_data(), sanitize_metadata() protect patient data
+* Full suite: 222 passed, 4 skipped (gated external tests only)
+* No P0 regressions
 
 ---
 
@@ -526,7 +537,7 @@ Run these in parallel:
 * [ ] P1-T1
 * [ ] P1-T2
 * [ ] Continue P1-T3
-* [ ] P1-T4
+* [x] P1-T4 — Failure Handling + Observability
 
 ## Wave 3 — Final integration
 
