@@ -16,7 +16,11 @@ from openrouter_agent import call_model, step_count_is, tool
 from core.config import OPENROUTER_MODEL
 from core.llm_client import get_client
 from core.schemas import RiskFlaggedValue, FinalExplanation
-from tools.medlineplus_connect import get_citation, fetch_medlineplus_info
+from tools.medlineplus_connect import (
+    CITATION_UNAVAILABLE_MARKER,
+    derive_citation_fields,
+    get_citation,
+)
 
 
 # --- SDK Tool Schemas ---
@@ -60,14 +64,18 @@ write a plain-language explanation for each.
 Return ONLY a JSON array. No markdown fences, no explanation, just the JSON.
 
 For each value, use these exact keys:
-- test_name
+- test_name: copy it exactly from the input
 - explanation: 1-2 sentences in plain English. NO diagnostic claims. \
 NO "you have..." or "this indicates..." phrasing. Use hedging: \
 "results in this range are generally considered..."
 - doctor_questions: array of 2-3 strings
-- citation: USE THE CITATION PROVIDED IN THE INPUT — do not make up citations
+- citation: USE THE CITATION PROVIDED IN THE INPUT — do not make up citations \
+and do not change or invent any URL in it. If the input's citation_status is \
+"unavailable", repeat the provided no-citation text as-is.
 
-CRITICAL: Never state or imply a diagnosis. Always use the citation provided."""
+CRITICAL: Never state or imply a diagnosis. Always use the citation provided. \
+If no citation is available in the input, do not fabricate one."""
+
 
 
 def _extract_json(text: str):
@@ -108,14 +116,26 @@ async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation
         return []
     client = get_client()
 
-    # Enrich risk_flagged values with real citations from MedlinePlus Connect
+    # Enrich risk_flagged values with real citations from MedlinePlus Connect.
+    # P0-T6: build the trusted citation map keyed by test_name — this map is
+    # the ONLY source of citations in the final output; the LLM cannot
+    # introduce or modify one.
     enriched = []
+    trusted_citations = {}
     for r in risk_flagged:
         test_name = r.test_name if hasattr(r, "test_name") else r.get("test_name", "")
         loinc = r.loinc_code if hasattr(r, "loinc_code") else r.get("loinc_code", "")
         citation = get_citation(loinc, test_name)
+        if test_name not in trusted_citations:
+            trusted_citations[test_name] = citation
+        citation_url, citation_status = derive_citation_fields(citation)
         r_dict = r.model_dump() if hasattr(r, "model_dump") else r
-        enriched.append({**r_dict, "citation": citation})
+        enriched.append({
+            **r_dict,
+            "citation": citation,
+            "citation_url": citation_url,
+            "citation_status": citation_status,
+        })
 
     context = json.dumps(enriched, indent=2)
     combined = f"{SYSTEM_PROMPT}\n\nUSER INPUT:\nExplain these lab results:\n{context}"
@@ -136,14 +156,24 @@ async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation
     if isinstance(data, dict):
         data = data.get("explanations", data.get("values", []))
 
-    # Post-process: ensure citation is never fabricated
+    # Post-process (P0-T6): citations are ALWAYS taken from the trusted
+    # lookup map — whatever the LLM returned is discarded. A test_name the
+    # LLM invented (not in the input) gets the explicit no-citation state,
+    # never a made-up source.
     explanations = []
     for item in data:
+        # Citation grounding fields are ours, not the model's: strip any
+        # values the LLM echoed/invented before validating the schema.
+        if isinstance(item, dict):
+            item.pop("citation_url", None)
+            item.pop("citation_status", None)
         exp = FinalExplanation(**item)
-        # If the LLM's citation looks fabricated (no URL, no parenthetical), replace
-        if exp.citation.startswith("MedlinePlus:") and "(" not in exp.citation:
-            real_citation = get_citation("", exp.test_name)
-            exp.citation = real_citation
+        trusted = trusted_citations.get(exp.test_name)
+        if trusted is None:
+            trusted = f"{exp.test_name} — {CITATION_UNAVAILABLE_MARKER}"
+        exp.citation = trusted
+        exp.citation_url, exp.citation_status = derive_citation_fields(trusted)
         explanations.append(exp)
 
     return explanations
+

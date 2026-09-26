@@ -48,11 +48,20 @@ class RiskFlaggedValue(BaseModel):
 
 
 class FinalExplanation(BaseModel):
-    """Output of Explanation Agent, before verification."""
+    """Output of Explanation Agent, before verification.
+
+    P0-T6 citation grounding: `citation_url` and `citation_status` are set by
+    the explainer from the trusted MedlinePlus lookup layer — never generated
+    by the LLM. `citation_status="unavailable"` is the explicit controlled
+    no-citation state (paired with the sentinel text in `citation`).
+    """
     test_name: str
     explanation: str
     doctor_questions: List[str]
     citation: str
+    citation_url: Optional[str] = None  # validated medlineplus.gov URL or None
+    citation_status: Literal["available", "unavailable"] = "unavailable"
+
 
 
 class VerifierResult(BaseModel):

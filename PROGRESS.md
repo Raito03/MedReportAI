@@ -4,6 +4,7 @@
 Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Literal`). 43 unit tests pass (24 reference range, 9 schema, 10 MedlinePlus). Unit conversion, unavailable-range propagation, and risk flagger guard all verified. E2E non-LLM path verified end-to-end.
 
 **P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 104 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
+**P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 119 passed / 3 skipped (2 OpenRouter async + 1 gated live test); live MedlinePlus test PASSED. See the "P0-T6" section below.
 
 ---
 
@@ -320,6 +321,54 @@ Text extraction without OCR is unsupported (OCR is out of scope): ...
 - Blank vs. image-only is distinguished via `page.images`; an exotic scanned PDF could be
   reported as "blank" instead of "image_only", but either way it is a controlled
   `PdfNoTextError` — never a fake success.
+
+---
+
+## P0-T6 — MedlinePlus Grounding Hardening (2026-09-26)
+
+**Status: DONE** — all acceptance criteria verified by the test results below.
+
+### What was hardened
+
+| File | Change |
+|------|--------|
+| `tools/medlineplus_connect.py` | URL trust policy: `is_trusted_medlineplus_url()` accepts only `medlineplus.gov` (exact or subdomain) over http(s) with no embedded credentials — rejects suffix/path/userinfo/scheme tricks. Response parsing hardened: accepts the original `feed`/`entries`/`result` containers, a single record dict, and plain list-of-dicts (`[{"url": "..."}]`); `None/{}/[{}]/[{"foo":"bar"}]/42` and invalid JSON all fail controlled with a debuggable `result.error`. Untrusted response URLs are never passed through. The mapping's fallback URL is re-validated (defense in depth). `URLError(socket.timeout)` now classifies as `Timeout after Ns`. `get_citation()` priority: validated Connect result → validated deterministic fallback page → explicit `"{test} — no MedlinePlus citation available"` (format unchanged — existing tests rely on it). New helpers: `CITATION_UNAVAILABLE_MARKER`, `derive_citation_fields()`. |
+| `agents/explainer.py` | Builds a **trusted citation map** (keyed by `test_name`, sourced from `get_citation()` per LOINC) *before* the LLM call and passes `citation` + `citation_url` + `citation_status` into the prompt. Post-process **always overrides** the LLM's citation with the trusted map — the LLM's citation text, URL, and any echoed grounding fields are discarded; a `test_name` the LLM invented (not looked up) receives the explicit no-citation state. Prompt tightened: do not invent/change URLs; repeat the provided no-citation text when `citation_status` is `unavailable`. |
+| `core/schemas.py` | `FinalExplanation` **extended** (no competing schema): `citation_url: Optional[str] = None`, `citation_status: Literal["available", "unavailable"] = "unavailable"`. Defaults keep every existing construction/round-trip valid. |
+
+**Not changed:** `agents/reference_range.py`, `data/*` (reference ranges), `agents/verifier.py`, `tools/pdf_extractor.py`, `pipeline/orchestrator.py`, P0-T1/T2/T4 contracts. No new dependencies; no OCR/LangChain/LangGraph/RAG/vector DB.
+
+### Tests added
+
+* `tests/test_p0_t6_citation_grounding.py` — **15 deterministic tests**; every HTTP call mocked at `urllib.request.urlopen`, every LLM mocked at `call_model`. Covers the 12 required cases: success (list + feed shapes), multiple records, empty response, malformed responses, untrusted URL, timeout, network error, unexpected exception, unknown LOINC, citation propagation (input AND output), no-citation propagation, citation isolation (Glucose `2345-7` vs WBC `6690-2`, LLM citations deliberately swapped), plus URL trust-policy unit checks, an LLM-invented-test_name check, a `lookup → risk → explain` integration flow, and a full mocked orchestrator E2E (PDF → verify) asserting the serialized output carries only the validated citation.
+* `tests/test_medlineplus_live.py` — live test for known LOINC `2345-7`, gated behind `MEDLINEPLUS_LIVE=1` (skipped by default so the normal suite never depends on live MedlinePlus); unreachable service reports as blocked via skip, never as passed.
+
+### Exact test results
+
+```text
+$ python -m pytest tests/test_p0_t6_citation_grounding.py -v
+15 passed in 3.18s
+
+$ python -m pytest tests/ -q                    # full deterministic suite
+119 passed, 3 skipped, 2 warnings in 4.62s      (EXIT=0)
+# skips = 2 x test_llm_client async (OpenRouter, P0-T5) + 1 x live MedlinePlus (gated)
+
+$ python -m pytest tests/test_schemas.py tests/test_reference_range.py \
+      tests/test_p0_t2_safety.py tests/test_pdf_extraction.py \
+      tests/test_p0_t4_seam_tests.py tests/test_medlineplus.py -q   # P0-T1..T4 regression
+104 passed in 2.79s                             (EXIT=0)
+
+$ MEDLINEPLUS_LIVE=1 python -m pytest tests/test_medlineplus_live.py -v
+1 passed in 0.84s                               (live PASS)
+```
+
+Baseline before this change: 104 passed, 2 skipped. After: 104 + 15 new = 119 passed, 3 skipped (the extra skip is the intentionally gated live test).
+
+### Limitations
+
+* `FinalExplanation` identifies results by `test_name`, so two results sharing a `test_name` share the first lookup's citation (pre-existing schema identity limitation — no cross-LOINC leakage possible for distinct names, which is tested).
+* A response carrying a real title but no parseable trusted URL yields a title-only citation (`citation_url=None`, status `available`).
+* The live test and the pre-existing `test_reference_range.py::test_medlineplus_get_citation_known_test` contact `connect.medlineplus.gov` only when run outside the mocked suite paths; the live one reports blocked (skip) if unreachable.
 
 ---
 
