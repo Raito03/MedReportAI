@@ -158,7 +158,30 @@ async def verify(
     text = await result.get_text()
     llm_result = _extract_json(text)
 
-    all_issues = issues + llm_result.get("issues_found", [])
+    # P0-T4 seam guard: fail closed on malformed LLM output. Contract is
+    # {"passed": bool, "issues_found": list[str]} — a missing field, wrong
+    # type, or self-contradictory response must NEVER be silently treated
+    # as valid approval.
+    if (
+        not isinstance(llm_result, dict)
+        or not isinstance(llm_result.get("passed"), bool)
+        or not isinstance(llm_result.get("issues_found"), list)
+        or not all(isinstance(i, str) for i in llm_result["issues_found"])
+    ):
+        llm_issues = [
+            "Verifier LLM returned malformed output "
+            "(expected passed: bool, issues_found: list[str]) "
+            "— failing closed for review"
+        ]
+    else:
+        llm_issues = list(llm_result["issues_found"])
+        if llm_result["passed"] is False and not llm_issues:
+            llm_issues = [
+                "Verifier LLM reported passed=false without issue details "
+                "— failing closed for review"
+            ]
+
+    all_issues = issues + llm_issues
     passed = len(all_issues) == 0
 
     output = VerificationOutput(

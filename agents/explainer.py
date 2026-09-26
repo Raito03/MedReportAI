@@ -101,6 +101,11 @@ async def explain(risk_flagged: List[RiskFlaggedValue]) -> List[FinalExplanation
 
     Each explanation gets a real MedlinePlus citation (not fabricated).
     """
+    # P0-T4 seam guard: empty input short-circuits — never call the LLM with
+    # zero values (a model asked to explain nothing could invent results for
+    # values that do not exist).
+    if not risk_flagged:
+        return []
     client = get_client()
 
     # Enrich risk_flagged values with real citations from MedlinePlus Connect
