@@ -496,6 +496,23 @@ def test_serialization_rejects_invalid_values():
     print("  PASS: invalid serialized data rejected by schemas")
 
 
+def test_extra_fields_ignored_not_propagated():
+    """Extra input keys are ignored on validation and never cross the next seam."""
+    injected = {"test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0,
+                "unit": "mg/dL", "status": "normal", "reasoning": "ok",
+                "bogus_extra": "injection attempt"}
+    r = RiskFlaggedValue.model_validate(injected)
+    assert r.status == "normal"
+    assert "bogus_extra" not in r.model_dump(), \
+        "extra fields must not propagate into the next agent's input"
+
+    extracted = ExtractedLabValue.model_validate(
+        {"test_name": "Glucose", "loinc_code": "2345-7", "value": 92.0,
+         "unit": "mg/dL", "unexpected": [1, 2, 3]})
+    assert "unexpected" not in extracted.model_dump()
+    print("  PASS: extra fields ignored and never propagated across seams")
+
+
 # ============================================================
 # Step 10 — Wrong-schema crossing
 # ============================================================
@@ -911,6 +928,7 @@ if __name__ == "__main__":
     test_verifier_malformed_output_wrong_type_fails_closed()
     test_serialization_roundtrip_all_schemas()
     test_serialization_rejects_invalid_values()
+    test_extra_fields_ignored_not_propagated()
     test_wrong_schema_crossing_rejected()
     test_identity_preserved_through_full_chain()
     test_unavailable_survives_every_seam()
