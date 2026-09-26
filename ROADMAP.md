@@ -47,18 +47,22 @@ Make the pipeline's foundations deterministic, safe, testable, and ready for Pha
 
 ## P0-T2 — Reference-Range Safety Consumer Audit
 
+**Status: DONE**
+
+**Commits:** `25d85bf`, `dea0a93`
+
 **Owner:** Backend / Safety
 
 **Subtasks:**
 
-* Audit every consumer of `RangeCheckedValue`
-* Confirm `None` never becomes `0`
-* Confirm `range_available=False` never becomes normal/critical
-* Confirm `unavailable` survives orchestrator serialization
-* Add orchestrator-level unavailable propagation tests
-* Verify sex-specific missing-context behavior at the pipeline boundary
-* Verify unit mismatch cannot reach range-based LLM classification
-* Verify reference provenance remains intact
+* [x] Audit every consumer of `RangeCheckedValue`
+* [x] Confirm `None` never becomes `0`
+* [x] Confirm `range_available=False` never becomes normal/critical
+* [x] Confirm `unavailable` survives orchestrator serialization
+* [x] Add orchestrator-level unavailable propagation tests
+* [x] Verify sex-specific missing-context behavior at the pipeline boundary
+* [x] Verify unit mismatch cannot reach range-based LLM classification
+* [x] Verify reference provenance remains intact
 
 **Dependency:** P0-T1
 
@@ -67,6 +71,16 @@ Make the pipeline's foundations deterministic, safe, testable, and ready for Pha
 **Exit criterion:**
 
 > No downstream consumer can accidentally classify an unavailable range as a real interval.
+
+**Completion notes (2026-09-26):**
+
+* Consumers audited: `core/schemas.py`, `agents/reference_range.py`, `agents/risk_flagger.py`, `pipeline/orchestrator.py`, `agents/explainer.py`, `agents/verifier.py`, `ui/cli.py`, `ui/app.py`, all tests
+* `range_note` (lookup reason) propagates through `RangeCheckedValue` into `RiskFlaggedValue.reasoning`
+* LLM classifications accepted only on exact `(test_name, loinc_code, value, unit)` identity — missing or wrong `loinc_code` is rejected, never inferred from `test_name`; duplicate `test_name` cannot transfer a classification to an unavailable value
+* Regression tests: 17 P0-T2 + 43 Task 1 = 60/60 deterministic passing; new safety tests mutation-checked against the pre-fix implementation; no external API required
+* `range_available=False` can never become `normal` / `mildly_abnormal` / `critical`
+
+> P0-T2 behavior must remain locked unless a later task demonstrates a concrete regression.
 
 ---
 
@@ -421,7 +435,7 @@ Do not make the tech lead a permanent single-task bottleneck.
 
 Run these in parallel:
 
-* [ ] P0-T2
+* [x] P0-T2 — Reference-Range Safety Consumer Audit (`25d85bf`, `dea0a93`)
 * [ ] P0-T3
 * [ ] P0-T4
 * [ ] P0-T5
