@@ -12,6 +12,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pipeline.orchestrator import run_pipeline
+from core.config import llm_configured
 from tools.pdf_extractor import PdfExtractionError
 
 
@@ -23,6 +24,15 @@ def main():
     pdf_path = sys.argv[1]
     if not os.path.exists(pdf_path):
         print(f"Error: File not found: {pdf_path}")
+        sys.exit(1)
+
+    if not llm_configured():
+        # Controlled failure (P1-T5): a clear message instead of a
+        # mid-pipeline auth traceback from the SDK when no key is set.
+        print(
+            "Error: OPENROUTER_API_KEY is not configured. Copy .env.example "
+            "to .env and set a real OpenRouter API key, then retry."
+        )
         sys.exit(1)
 
     try:

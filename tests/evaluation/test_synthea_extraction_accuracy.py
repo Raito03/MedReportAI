@@ -12,8 +12,9 @@ Seven required tests plus rigor checks:
    real extraction agent (mocked LLM only) and is measured against the 95% target
 
 Rigor checks: ground-truth invariants (supported LOINCs/units only), fixture
-byte-reproducibility, and the extracted observations still feeding the
-project's reference-range lookup.
+reproducibility (deterministic regeneration + manifest integrity + content
+identity with the committed PDFs), and the extracted observations still
+feeding the project's reference-range lookup.
 
 No test in this module touches the network: ``tests/conftest.py`` already
 installs a guard that fails on any real LLM call, and the stand-in patches the
@@ -309,6 +310,20 @@ def test_ground_truth_contains_only_supported_labs_and_units():
 
 
 def test_committed_report_pdfs_are_byte_reproducible(tmp_path):
+    """Determinism proof, split into its three real guarantees.
+
+    1. Regeneration is byte-deterministic in this environment (two fresh
+       renders are byte-identical — no timestamps/randomness/environment).
+    2. The committed fixture files are intact: each matches the SHA-256 in
+       ``synthea_reports_manifest.json``.
+    3. Fresh renders are content-identical to the committed fixtures. The
+       content comparison normalizes the deflate encoding first (see
+       ``pdf_fixtures.content_signature``): reportlab's ``invariant`` mode
+       pins dates and document IDs, but the compressed bytes still differ
+       between upstream zlib and the zlib-ng shipped by CPython 3.13+ on
+       Windows, so raw byte equality with fixtures committed on another
+       machine would test the deflate build, not the pipeline.
+    """
     with open(MANIFEST_PATH, "r", encoding="utf-8") as handle:
         manifest = json.load(handle)
     manifest_hashes = {entry["report_id"]: entry["sha256"]
@@ -316,17 +331,22 @@ def test_committed_report_pdfs_are_byte_reproducible(tmp_path):
 
     generated = pdf_fixtures.generate_all(GROUND_TRUTH, tmp_path)
     assert set(generated) == set(manifest_hashes)
-    for report_id, generated_path in generated.items():
-        fresh = pdf_fixtures.sha256_of(generated_path)
-        committed = pdf_fixtures.sha256_of(reports_dir() / f"{report_id}.pdf")
-        assert fresh == committed == manifest_hashes[report_id], report_id
 
     # A second generation is byte-identical as well (no timestamps/randomness).
     second_dir = tmp_path / "second"
     pdf_fixtures.generate_all(GROUND_TRUTH, second_dir)
-    for report_id in manifest_hashes:
-        assert pdf_fixtures.sha256_of(second_dir / f"{report_id}.pdf") == \
-            manifest_hashes[report_id]
+
+    for report_id, generated_path in generated.items():
+        committed_path = reports_dir() / f"{report_id}.pdf"
+        fresh = pdf_fixtures.sha256_of(generated_path)
+        committed = pdf_fixtures.sha256_of(committed_path)
+        assert fresh == pdf_fixtures.sha256_of(second_dir / f"{report_id}.pdf"), \
+            f"{report_id}: regeneration is not byte-deterministic"
+        assert committed == manifest_hashes[report_id], \
+            f"{report_id}: committed fixture does not match the manifest"
+        assert pdf_fixtures.content_sha256_of(generated_path) == \
+            pdf_fixtures.content_sha256_of(committed_path), \
+            f"{report_id}: regenerated content differs from the committed fixture"
     print(f"  PASS: {len(generated)} committed report PDFs are byte-reproducible")
 
 

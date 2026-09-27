@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 from pipeline.orchestrator import run_pipeline
+from core.config import llm_configured
 from tools.pdf_extractor import PdfExtractionError
 
 
@@ -22,6 +23,14 @@ def main():
     uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
 
     if uploaded_file:
+        if not llm_configured():
+            # Controlled failure (P1-T5): a clear message instead of a
+            # mid-pipeline auth error from the SDK when no key is set.
+            st.error(
+                "OPENROUTER_API_KEY is not configured — copy .env.example to "
+                ".env and set a real OpenRouter API key to run the pipeline."
+            )
+            return
         temp_path = f"_temp_{uploaded_file.name}"
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.read())

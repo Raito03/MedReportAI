@@ -3,12 +3,19 @@
 Usage:
     python tests/evaluation/generate_synthea_reports.py            # write PDFs + manifest
     python tests/evaluation/generate_synthea_reports.py --check     # regenerate into a
-                                                                   # temp dir and compare
-                                                                   # hashes with the manifest
+                                                                   # temp dir and verify the
+                                                                   # committed fixtures match
+                                                                   # the manifest and that the
+                                                                   # regenerated *content*
+                                                                   # matches the fixtures
 
 The PDFs are rendered from ``data/synthea_ground_truth.json`` (never from
 extractor output) with reportlab's ``invariant`` mode, so the files are
-byte-reproducible and safe to commit as fixtures.
+byte-reproducible on the machine/deflate build that generated them and safe
+to commit as fixtures. ``--check`` compares *content* (streams decoded before
+hashing; see ``pdf_fixtures.content_signature``) so it also passes on
+environments whose deflate implementation differs, e.g. the zlib-ng shipped
+by CPython 3.13+ on Windows.
 """
 
 from __future__ import annotations
@@ -49,6 +56,11 @@ def generate(check: bool = False, out_dir: Path = None) -> int:
             tmp_path = Path(tmp_dir)
             pdf_fixtures.generate_all(ground_truth, tmp_path)
             fresh = pdf_fixtures.manifest_for(ground_truth, tmp_path)
+            # Computed before the temp dir is removed.
+            fresh_content = {
+                entry["report_id"]:
+                    pdf_fixtures.content_sha256_of(tmp_path / entry["pdf_file"])
+                for entry in fresh["reports"]}
         if not MANIFEST_PATH.exists():
             print(f"FAIL: manifest missing: {MANIFEST_PATH}")
             return 1
@@ -56,18 +68,29 @@ def generate(check: bool = False, out_dir: Path = None) -> int:
             committed = json.load(handle)
         committed_hashes = {entry["report_id"]: entry["sha256"]
                             for entry in committed["reports"]}
-        fresh_hashes = {entry["report_id"]: entry["sha256"]
-                        for entry in fresh["reports"]}
-        mismatches = [
-            report_id for report_id, digest in fresh_hashes.items()
-            if committed_hashes.get(report_id) != digest
-        ]
-        if mismatches:
-            print("FAIL: regenerated PDFs differ from the committed fixtures: "
-                  + ", ".join(sorted(mismatches)))
+        failures = []
+        for entry in fresh["reports"]:
+            report_id = entry["report_id"]
+            committed_path = reports_dir() / entry["pdf_file"]
+            if not committed_path.exists():
+                failures.append(f"{report_id}: committed fixture missing")
+                continue
+            if pdf_fixtures.sha256_of(committed_path) != committed_hashes.get(report_id):
+                failures.append(f"{report_id}: committed fixture does not match "
+                                "the manifest")
+                continue
+            if fresh_content[report_id] != \
+                    pdf_fixtures.content_sha256_of(committed_path):
+                failures.append(f"{report_id}: regenerated content differs from "
+                                "the committed fixture")
+        if failures:
+            print("FAIL: fixture reproducibility check failed:")
+            for failure in failures:
+                print(f"  - {failure}")
             return 1
-        print(f"OK: {len(fresh_hashes)} report PDFs are byte-reproducible "
-              "(generator output == committed fixtures)")
+        print(f"OK: {len(fresh['reports'])} report PDFs are reproducible "
+              "(committed fixtures match the manifest and regenerated content "
+              "matches the fixtures, deflate-encoding normalized)")
         return 0
 
     target_dir = Path(out_dir) if out_dir is not None else reports_dir()
@@ -86,7 +109,8 @@ def generate(check: bool = False, out_dir: Path = None) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
-                        help="verify that the committed PDFs are byte-reproducible")
+                        help="verify the committed PDFs match the manifest and "
+                             "regenerated content matches the fixtures")
     parser.add_argument("--out-dir", default=None,
                         help="directory to write the PDFs into (default: data/synthea_reports)")
     args = parser.parse_args(argv)

@@ -16,7 +16,10 @@ ways.
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import re
+import zlib
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -234,6 +237,70 @@ def sha256_of(path: Path) -> str:
         for chunk in iter(lambda: handle.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def content_signature(data: bytes) -> bytes:
+    """A deflate-implementation-independent view of a fixture PDF's content.
+
+    reportlab's ``invariant`` mode removes timestamps and random document
+    IDs, so regenerating a fixture is byte-deterministic on the machine that
+    produced it. The *compressed* stream bytes, however, are produced by the
+    deflate library: CPython 3.13+ ships zlib-ng on Windows, which encodes
+    identical input differently from upstream zlib. Byte equality against a
+    fixture committed on another machine can therefore fail with zero content
+    difference (P1-T5 repro run hit exactly this on Python 3.14).
+
+    To compare content instead of encoding, this signature replaces every
+    stream payload with the SHA-256 of its decoded bytes and neutralizes the
+    parts of the file that merely index those payloads (``/Length`` values,
+    the xref offset table, the ``startxref`` pointer). Object structure,
+    dictionaries, metadata and the invariant trailer ID are preserved, so two
+    PDFs share a signature only if they encode the same PDF content.
+    """
+    out = bytearray()
+    pos = 0
+    while True:
+        start_kw = data.find(b"stream", pos)
+        if start_kw == -1:
+            break
+        if data[max(0, start_kw - 3):start_kw] == b"end":  # part of "endstream"
+            pos = start_kw + len(b"stream")
+            continue
+        payload_start = start_kw + len(b"stream")
+        if data[payload_start:payload_start + 2] == b"\r\n":
+            payload_start += 2
+        elif data[payload_start:payload_start + 1] in (b"\n", b"\r"):
+            payload_start += 1
+        end_kw = data.find(b"endstream", payload_start)
+        if end_kw == -1:
+            break
+        payload = data[payload_start:end_kw].rstrip(b"\r\n")
+        try:
+            decoded = zlib.decompress(base64.a85decode(payload, adobe=True))
+        except Exception:  # not an ASCII85+Flate stream: keep the raw payload
+            decoded = payload
+        out += data[pos:start_kw]
+        out += b"stream\n"
+        out += hashlib.sha256(decoded).hexdigest().encode("ascii")
+        out += b"\nendstream"
+        pos = end_kw + len(b"endstream")
+    out += data[pos:]
+    signature = bytes(out)
+    signature = re.sub(rb"/Length \d+", b"/Length", signature)
+    xref = signature.find(b"\nxref")
+    if xref != -1:
+        trailer = signature.find(b"trailer", xref)
+        if trailer != -1:
+            signature = signature[:xref] + b"\nxref\n<XREF-NEUTRALIZED>\n" + signature[trailer:]
+        else:
+            signature = signature[:xref] + b"\nxref\n<XREF-TRUNCATED>"
+    signature = re.sub(rb"startxref\n\d+\n", b"startxref\n<N>\n", signature)
+    return signature
+
+
+def content_sha256_of(path: Path) -> str:
+    """SHA-256 of the deflate-normalized content signature of a fixture PDF."""
+    return hashlib.sha256(content_signature(Path(path).read_bytes())).hexdigest()
 
 
 def manifest_for(ground_truth: Dict[str, Any], out_dir: Path) -> Dict[str, Any]:

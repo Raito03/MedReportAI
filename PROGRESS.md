@@ -7,6 +7,8 @@ Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Li
 **P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 158 passed / 4 skipped (all skips are gated external tests: 3 OpenRouter per P0-T5 + 1 gated live MedlinePlus); live MedlinePlus test PASSED. See the "P0-T6" section below.
 **P1-T2 (Verifier Self-Correction) completed 2026-09-26** - bounded self-correction loop: the verifier's `issues_found` are now injected verbatim into the correction prompt and the corrected output is re-verified; 5 deterministic E2E tests (success, persistent failure, retry-limit bounds, safety invariants); full suite 173 passed / 4 skipped (same gated external skips as before). See the "P1-T2" section below.
 **P1-T3 (Synthea extraction-accuracy evaluation) completed 2026-09-26** - separately stored synthetic ground truth (10 controlled reports / 49 observations, 27 supported labs), deterministic byte-reproducible report PDFs, field-level + observation-level accuracy metric with duplicate-safe matching and a formatted failure report; measured **49/49 = 100.00%** observation accuracy against the >=95% target (PASS), full suite 168 passed / 4 skipped. The LLM step is mocked, so the number measures the deterministic part of the extraction path (PDF -> text -> schema -> LOINC/unit handling), not live-model accuracy. **Real LLM validation (2026-09-26)**: ran the same 10 Synthea reports through the real extraction path with `cohere/north-mini-code:free` — **49/49 = 100.00% observation accuracy on both runs** (Run 1: 72.6s, Run 2: 78.8s). P1-T5 readiness: READY. See the "P1-T3" section below.
+**P1-T4 (Failure Handling + Observability) completed 2026-09-26** - structured logging for all pipeline stages, 18-member failure taxonomy, privacy sanitization, latency tracking; 41/41 tests pass. See the "P1-T4" section below.
+**P1-T5 (Final E2E / Demo Gate & UI/CLI Hardening) completed 2026-09-27** - entry points hardened with `llm_configured()` guard (clear startup errors instead of mid-pipeline tracebacks for unconfigured/placeholder keys); corrupt PDF fails safely prior to LLM call; reportlab cross-platform zlib/deflate normalization verified for fixture reproducibility on Python 3.14; 10/10 deterministic entry-point tests passing; full deterministic suite 248 passed, 4 skipped (external skips). See the "P1-T5" section below.
 
 ---
 
@@ -806,13 +808,44 @@ No P0 regressions
 
 ---
 
+## P1-T5 — Final E2E / Demo Gate & UI/CLI Hardening (2026-09-27)
+
+**Status: COMPLETE / DETERMINISTICALLY VERIFIED**
+
+### What was added / hardened
+
+| File | Change |
+| --- | --- |
+| `core/config.py` | Added `llm_configured()` helper detecting blank or placeholder (`your-key-here`) keys |
+| `ui/cli.py` | Guarded entry point with `llm_configured()`; missing or template keys produce clean error with exit code 1 instead of mid-pipeline HTTP/SDK traceback |
+| `ui/app.py` | Added Streamlit UI warning/error banner when LLM is not configured |
+| `tests/test_p1_t5_entry_points.py` | 10 deterministic tests covering CLI usage, missing file, missing key, corrupt PDF safety, Streamlit import, and configuration semantics |
+| `tests/evaluation/pdf_fixtures.py` | Deflate-encoding normalization for reportlab PDFs so fixtures match byte-for-byte or content-wise on Python 3.14 / different zlib builds |
+| `tests/evaluation/generate_synthea_reports.py` | Updated `--check` to verify fixture reproducibility with encoding normalization |
+| `tests/evaluation/test_synthea_extraction_accuracy.py` | Fixture reproducibility test aligns with cross-platform PDF signature verification |
+
+### Verification results
+
+```text
+$ .venv/Scripts/python -m pytest tests/test_p1_t5_entry_points.py -v
+10 passed in 8.41s
+
+$ .venv/Scripts/python tests/evaluation/generate_synthea_reports.py --check
+OK: 10 report PDFs are reproducible
+
+$ .venv/Scripts/python tests/evaluation/run_evaluation.py
+RESULT: PASS (49/49 = 100.00% observation accuracy)
+
+$ .venv/Scripts/python -m pytest -q
+248 passed, 4 skipped in 20.81s
+```
+
+---
+
 ## Next Steps
 
-1. ~~Add $10 credits to OpenRouter~~ — Free tier active and working ✅
-2. ~~Unit conversion fix~~ — Numerical conversion implemented ✅
-3. ~~Unavailable reference propagation fix~~ — 0-0 eliminated ✅
-4. Run full E2E on `normal_report.pdf`, `abnormal_report.pdf`, `injection_attack.pdf` (needs rate limit to clear or paid tier)
-5. Verify injection defense works
-6. Verify self-correction works
-7. Test Streamlit UI
-8. ~~Run 3-5 Synthea samples for accuracy number~~ — **done in P1-T3**: 10 controlled reports / 49 observations evaluated offline, 49/49 = 100.00% observation accuracy (LLM mocked; see the P1-T3 section for the exact scope statement)
+1. Run live demonstrations when `OPENROUTER_API_KEY` is present:
+   - CLI demo: `python -m ui.cli data/samples/normal_report.pdf`
+   - Injection defense demo: `python tools/injection_demo.py --runs 5`
+   - Streamlit UI: `streamlit run ui/app.py`
+2. All non-live and deterministic requirements are 100% verified and locked.
