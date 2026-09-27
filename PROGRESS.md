@@ -6,7 +6,7 @@ Task 1 LOCKED. Schema contract fixed (`unavailable` explicitly supported via `Li
 **P0-T3 (PDF extraction robustness) completed 2026-09-26** - controlled failures for blank/corrupt/image-only PDFs, no OCR; 12/12 P0-T3 tests pass; merged deterministic suite (P0-T1..P0-T4): 104 passed / 2 skipped (pre-existing OpenRouter async integration skips). See the "P0-T3" section below.
 **P0-T6 (MedlinePlus grounding hardening) completed 2026-09-26** - trusted-URL policy, hardened response parsing, timeout/network/malformed controlled failures, LLM can no longer invent or change a citation, explicit `citation_url`/`citation_status` on `FinalExplanation`; full suite 158 passed / 4 skipped (all skips are gated external tests: 3 OpenRouter per P0-T5 + 1 gated live MedlinePlus); live MedlinePlus test PASSED. See the "P0-T6" section below.
 **P1-T2 (Verifier Self-Correction) completed 2026-09-26** - bounded self-correction loop: the verifier's `issues_found` are now injected verbatim into the correction prompt and the corrected output is re-verified; 5 deterministic E2E tests (success, persistent failure, retry-limit bounds, safety invariants); full suite 173 passed / 4 skipped (same gated external skips as before). See the "P1-T2" section below.
-**P1-T3 (Synthea extraction-accuracy evaluation) completed 2026-09-26** - separately stored synthetic ground truth (10 controlled reports / 49 observations, 27 supported labs), deterministic byte-reproducible report PDFs, field-level + observation-level accuracy metric with duplicate-safe matching and a formatted failure report; measured **49/49 = 100.00%** observation accuracy against the >=95% target (PASS), full suite 168 passed / 4 skipped. The LLM step is mocked, so the number measures the deterministic part of the extraction path (PDF -> text -> schema -> LOINC/unit handling), not live-model accuracy. See the "P1-T3" section below.
+**P1-T3 (Synthea extraction-accuracy evaluation) completed 2026-09-26** - separately stored synthetic ground truth (10 controlled reports / 49 observations, 27 supported labs), deterministic byte-reproducible report PDFs, field-level + observation-level accuracy metric with duplicate-safe matching and a formatted failure report; measured **49/49 = 100.00%** observation accuracy against the >=95% target (PASS), full suite 168 passed / 4 skipped. The LLM step is mocked, so the number measures the deterministic part of the extraction path (PDF -> text -> schema -> LOINC/unit handling), not live-model accuracy. **Real LLM validation (2026-09-26)**: ran the same 10 Synthea reports through the real extraction path with `cohere/north-mini-code:free` — **49/49 = 100.00% observation accuracy on both runs** (Run 1: 72.6s, Run 2: 78.8s). P1-T5 readiness: READY. See the "P1-T3" section below.
 
 ---
 
@@ -630,6 +630,49 @@ None at dataset level: 0 missing, 0 mismatched, 0 unexpected, every field 100%. 
 4. Only numeric results are covered — the `ExtractedLabValue` contract has no qualitative values (`<0.5`, `negative`, `trace`).
 5. Matching is occurrence-order based, which is exact for these fixtures but would need a collection-time identity if identical tests were reported out of order.
 6. The prompt's older live-model pipeline samples were not reused as ground truth: they are extractor output, so reusing them would have made the ground truth dependent on extractor behaviour.
+
+---
+
+## P1-T3 Real LLM Validation (2026-09-26)
+
+**Status: COMPLETED — real OpenRouter LLM achieved 100.00% on both runs, meeting the >=95% threshold.**
+
+### What was added
+
+| File | Purpose |
+| --- | --- |
+| `tests/evaluation/run_real_llm_evaluation.py` | Runs the same 10 Synthea reports through the real extraction path (PDF → pdfplumber → agents.extraction → real OpenRouter LLM) and measures accuracy against ground truth |
+
+### Real LLM evaluation results
+
+**Model:** `cohere/north-mini-code:free` (OpenRouter free tier)
+
+```
+Run 1: 100.00% (49/49) — 72.6s
+Run 2: 100.00% (49/49) — 78.8s
+```
+
+**Field accuracy:**
+- test_name: 100.00% (49/49)
+- loinc_code: 100.00% (49/49)
+- value: 100.00% (49/49)
+- unit: 100.00% (49/49)
+
+**Observation accuracy:** 49/49 = 100.00%
+**Extraction precision:** 100.00%
+**Missing observations:** 0
+**Unexpected (hallucinated) observations:** 0
+
+### What is genuinely exercised
+
+Real code path: `tools.pdf_extractor.pdf_to_text()` reads real PDF bytes → `agents.extraction.extract_lab_values()` builds the real prompt, calls the real OpenRouter LLM, parses the real JSON, validates through the real Pydantic schema and runs the real `resolve_loinc_from_test_name` post-processing → `core.schemas.ExtractedLabValue` → evaluator.
+
+### Limitations
+
+- The dataset is small (10 reports / 49 observations) and hand-authored from the project's supported-lab vocabulary
+- Only machine-readable (text-layer) PDFs are evaluated
+- Only numeric results are covered
+- Results are non-deterministic (LLM temperature); two runs achieved 100% but more runs would be needed to assess stability
 
 ### Environment notes (this machine only — no repository changes)
 
