@@ -44,6 +44,17 @@ def main():
                 os.remove(temp_path)
                 st.error(f"PDF extraction failed: {exc}")
                 return
+            except Exception as exc:
+                # Controlled failure (P1-T5): any other pipeline failure
+                # (LLM rate limit, network, auth, malformed output) must
+                # surface as a readable message — never a raw traceback
+                # or internal stack frames in the UI.
+                os.remove(temp_path)
+                st.error(
+                    f"The analysis pipeline could not complete: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                return
 
         os.remove(temp_path)
 

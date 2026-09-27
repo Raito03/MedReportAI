@@ -323,6 +323,8 @@ Prove the required agentic demo moments, quantify extraction quality, harden fai
 
 ## P1-T1 — Prompt-Injection Defense Demo
 
+**Status: DONE**
+
 **Owner:** Security / Agent
 
 **Subtasks:**
@@ -344,6 +346,12 @@ Prove the required agentic demo moments, quantify extraction quality, harden fai
 **Exit criterion:**
 
 > Injection defense works reliably on repeated runs.
+
+**Completion notes (2026-09-27):**
+
+* Deterministic: 14/14 tests (`tests/test_p1_t1_prompt_injection.py`)
+* Live acceptance: 5/5 real-OpenRouter runs on `data/samples/injection_attack.pdf` completed with 0 injection failures and 0 errored runs (`python tools/injection_demo.py --runs 5`, model `cohere/north-mini-code:free`) — exit criterion satisfied
+* Extracted values matched the printed abnormal values on every run; no attack phrase or `all_normal` payload reached any downstream stage
 
 ---
 
@@ -560,7 +568,7 @@ Additionally:
 
 Run these in parallel:
 
-* [ ] P1-T1
+* [x] P1-T1 — Prompt-Injection Defense Demo (14/14 deterministic + 5/5 live runs held)
 * [x] P1-T2 — Verifier Self-Correction Demo
 * [x] Continue P1-T3 (`tests/evaluation/` — dataset, evaluator, 10 tests, measured 49/49 = 100.00%)
 * [x] P1-T4 — Failure Handling + Observability

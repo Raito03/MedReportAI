@@ -429,7 +429,7 @@ Future changes should not modify the locked reference-range safety contract or P
 
 ## P1-T1 — Prompt-Injection Defense Demo
 
-**Status: IMPLEMENTED / DETERMINISTICALLY VERIFIED — REAL-MODEL REPEAT VERIFICATION BLOCKED**
+**Status: DONE — 14/14 deterministic + 5/5 live injection runs held (2026-09-27)**
 
 Implementation commit: `586e794` (parent: teammate commit `1e1969f`).
 
@@ -441,9 +441,11 @@ Implementation commit: `586e794` (parent: teammate commit `1e1969f`).
 
 **Deterministic tests:** `python -m pytest tests/test_p1_t1_prompt_injection.py -q` → **14 passed**.
 
-**Real-model verification:** 3/3 completed live runs clean; 0/3 showed any injection effect. Runs 4–5 blocked by free-tier rate limit.
+**Real-model verification (2026-09-27):** `python tools/injection_demo.py --runs 5` (fresh OpenRouter account key, model `cohere/north-mini-code:free`) completed **5/5 runs with 0 injection failures and 0 errored runs** — `INJECTION DEFENSE: HELD on all runs`. Extracted values matched the printed abnormal values on every run; no attack phrase or `all_normal` payload reached any downstream stage. (Earlier on the old account: 3/3 clean, runs 4–5 quota-blocked.)
 
-**Exit criterion:** `> Injection defense works reliably on repeated runs.` — **NOT yet fully demonstrated**. Implementation + 14/14 deterministic tests are complete, but the 5-run real-model evidence is pending the quota blocker. P1-T1 is therefore NOT marked DONE / LOCKED.
+**Exit criterion:** `> Injection defense works reliably on repeated runs.` — **MET** (5/5 live runs held, 2026-09-27). P1-T1 is DONE.
+
+**Residual note:** subsequent re-runs after the 5/5 set exhausted the fresh account's free-model daily quota (429 `free-models-per-day`) — an external quota limitation, not an injection signal.
 
 ---
 
@@ -650,9 +652,14 @@ None at dataset level: 0 missing, 0 mismatched, 0 unexpected, every field 100%. 
 **Model:** `cohere/north-mini-code:free` (OpenRouter free tier)
 
 ```
-Run 1: 100.00% (49/49) — 72.6s
-Run 2: 100.00% (49/49) — 78.8s
+Run 1 (2026-09-26): 100.00% (49/49) — 72.6s
+Run 2 (2026-09-26): 100.00% (49/49) — 78.8s
+Re-verification with fresh account key (2026-09-27):
+Run 3: 100.00% (49/49) — 99.8s
+Run 4: 100.00% (49/49) — 64.0s
 ```
+
+4/4 live runs at 100.00%.
 
 **Field accuracy:**
 - test_name: 100.00% (49/49)
@@ -718,7 +725,7 @@ Real code path: `tools.pdf_extractor.pdf_to_text()` reads real PDF bytes → `ag
 - [x] Unit abbreviations recognized as equivalent
 - [x] Sex-specific ranges handled without guessing
 - [ ] Two required demo moments work reliably — NOT YET TESTED
-  - [ ] Injection defense demo — deterministic tests pass; live 5-run acceptance pending quota
+  - [x] Injection defense demo — 14/14 deterministic + 5/5 live runs held (2026-09-27)
   - [ ] Self-correction demo — deterministic tests pass; live demonstration not yet run
 
 ---

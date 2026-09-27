@@ -77,6 +77,48 @@ def test_cli_invalid_pdf_fails_controlled_before_any_llm_call(tmp_path):
     assert "Traceback" not in out
 
 
+def test_cli_llm_pipeline_failure_is_controlled_no_traceback(tmp_path, monkeypatch):
+    # A non-PdfExtractionError failure mid-pipeline (e.g. LLM rate limit,
+    # network error) must surface as a one-line controlled message —
+    # never an internal Python traceback (the defect found in the real
+    # Streamlit browser test: TooManyRequestsResponseError dumped the full
+    # stack into the UI).
+    import builtins
+    import io as _io
+
+    # ui/cli.py wraps sys.stdout AND sys.stderr at import time; give each its
+    # own buffer so they cannot wrap (and later close) pytest's capture streams.
+    monkeypatch.setattr(sys, "stdout", _io.TextIOWrapper(_io.BytesIO(), encoding="utf-8"))
+    monkeypatch.setattr(sys, "stderr", _io.TextIOWrapper(_io.BytesIO(), encoding="utf-8"))
+    import ui.cli
+
+    printed = []
+
+    def _recorder(*args, **kwargs):
+        printed.append(" ".join(str(a) for a in args))
+
+    async def _boom(pdf_path, logger=None):
+        raise RuntimeError("simulated rate limit")
+
+    good_pdf = tmp_path / "good.pdf"
+    good_pdf.write_bytes(b"%PDF-1.4 minimal")
+    monkeypatch.setattr(ui.cli, "run_pipeline", _boom)
+    monkeypatch.setattr("core.config.OPENROUTER_API_KEY", "sk-or-dummy-key-for-test")
+    monkeypatch.setattr(sys, "argv", ["ui.cli", str(good_pdf)])
+    monkeypatch.setattr(builtins, "print", _recorder)
+
+    with pytest.raises(SystemExit) as exc_info:
+        ui.cli.main()
+
+    # If the except clause were missing, RuntimeError would propagate here
+    # instead of SystemExit — that is itself part of the assertion.
+    assert exc_info.value.code == 1
+    out = "\n".join(printed)
+    assert "pipeline could not complete" in out
+    assert "simulated rate limit" in out
+    assert "Traceback" not in out
+
+
 def test_streamlit_entry_point_imports_cleanly():
     import ui.app
 

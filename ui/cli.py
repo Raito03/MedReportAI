@@ -42,6 +42,12 @@ def main():
         # corrupt/blank/image-only PDFs.
         print(f"\nError: PDF extraction failed: {exc}")
         sys.exit(1)
+    except Exception as exc:
+        # Controlled failure (P1-T5): any other pipeline failure (LLM rate
+        # limit, network, auth, malformed output) gets a readable one-line
+        # message instead of an internal traceback.
+        print(f"\nError: pipeline could not complete: {type(exc).__name__}: {exc}")
+        sys.exit(1)
 
     print("\n" + "=" * 60)
     print("RESULTS")

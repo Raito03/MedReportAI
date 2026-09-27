@@ -10,7 +10,7 @@ Built as an internal TCS demo/evaluation project — 8-person team, presented to
 
 | If it were just a prompt | What we actually built |
 |---|---|
-| LLM guesses reference ranges from memory | A **tool call** retrieves real ranges from a local LOINC/NHANES lookup table — never guessed |
+| LLM guesses reference ranges from memory | A **tool call** retrieves real ranges from a local LOINC/MedlinePlus lookup table — never guessed |
 | One shot, no self-check | A dedicated **Verifier Agent** checks output and can trigger a redo |
 | No defense against malicious input | PDF content is treated as **untrusted data** — demonstrated against prompt-injection |
 | Unstructured text output | Every agent boundary uses strict, validated **Pydantic JSON schemas** |
@@ -42,7 +42,7 @@ Each agent has:
 | LLM API | [OpenRouter](https://openrouter.ai) via `openrouter-agent-sdk` |
 | Model | `cohere/north-mini-code:free` (tested against 4 free models) |
 | PDF extraction | `pdfplumber` (code-based, not LLM) |
-| Reference ranges | 26 LOINC codes + NHANES ranges (local JSON lookup) |
+| Reference ranges | 27 LOINC codes + MedlinePlus-documented ranges (local JSON lookup) |
 | Orchestration | Sequential Python orchestrator with retry loop |
 | Demo interface | CLI + Streamlit |
 
@@ -71,7 +71,7 @@ Each agent has:
 │   └── generate_samples.py  # Creates test PDFs
 │
 ├── data/
-│   ├── reference_ranges.json # 26 LOINC codes + NHANES ranges
+│   ├── reference_ranges.json # 27 LOINC codes + MedlinePlus-documented ranges
 │   └── samples/              # Synthetic test PDFs
 │       ├── normal_report.pdf
 │       ├── abnormal_report.pdf
