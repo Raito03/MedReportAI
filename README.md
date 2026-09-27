@@ -261,7 +261,7 @@ Tested 4 free OpenRouter models against SDK compatibility:
 - [x] Exact Pydantic schemas at every agent boundary
 - [x] No real patient data — all synthetic
 - [x] Every explanation includes a citation
-- [ ] Both demo moments work reliably (in progress)
+- [x] Both demo moments work reliably — injection defense: 5/5 live runs held (2026-09-27) + injection PDF browser run held (2026-09-28); self-correction: 5/5 deterministic tests + live pipeline runs exercising verifier rejection → bounded retry → safe failure/verified output (2026-09-28)
 
 ---
 
