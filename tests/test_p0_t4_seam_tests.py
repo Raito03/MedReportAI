@@ -406,6 +406,25 @@ def test_verifier_code_check_overrides_llm_pass():
     print("  PASS: verifier code check detects diagnostic language deterministically")
 
 
+def test_verifier_flags_diagnostic_language_in_questions():
+    """Diagnostic phrasing must be caught in BOTH question lists, not just explanation."""
+    explanations = [FinalExplanation(
+        test_name="Glucose",
+        explanation="Glucose measures blood sugar levels generally.",
+        doctor_questions=["Should I retest?"],
+        patient_questions=["You have diabetes based on this result"],  # diagnostic
+        citation="Lab Reference (https://example.org/lab)",
+    )]
+    risk_values = [RiskFlaggedValue(**MOCK_RISK_ITEM)]
+    llm = _llm_returning_text(MOCK_VERIFIER_PASS)  # LLM claims pass
+    with patch("agents.verifier.call_model", llm),          patch("agents.verifier.get_client", MagicMock(return_value=MagicMock())):
+        result = asyncio.run(verify(explanations, risk_values))
+
+    assert result.passed is False
+    assert any("Question contains diagnostic" in i for i in result.issues_found)
+    print("  PASS: diagnostic language in patient_questions is caught")
+
+
 def test_verifier_malformed_output_missing_field_fails_closed():
     """Malformed verifier LLM output (missing issues_found) must NOT approve.
 

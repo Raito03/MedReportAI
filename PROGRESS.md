@@ -691,6 +691,21 @@ Real code path: `tools.pdf_extractor.pdf_to_text()` reads real PDF bytes → `ag
 
 ---
 
+## Question-list split: doctor vs patient (2026-09-28)
+
+**Status: DONE**
+
+The explainer produced a mix of clinician-directed and patient-directed questions, all rendered under a single "Questions for your doctor" heading. Split into two explicit groups:
+
+* `core/schemas.py` — additive `patient_questions: List[str] = []` on `FinalExplanation` (backward-compatible; `doctor_questions` contract unchanged)
+* `agents/explainer.py` — prompt now asks for `doctor_questions` (ask the clinician) and `patient_questions` (patient self-reflection/pre-visit), separate keys
+* `agents/verifier.py` — `_code_check()` now scans BOTH question lists for diagnostic language and flags an empty combined question set
+* `ui/app.py` / `ui/cli.py` — two headings: "Questions to ask your doctor" / "Questions for doctor" and "Things to consider"
+* Tests: +2 (`test_final_explanation_default_patient_questions`, `test_verifier_flags_diagnostic_language_in_questions`) — full suite **251 passed, 4 skipped, 0 failed**; P0-T7 gate 10/10
+* Live browser verification (2026-09-28): both headings render on all 14 tests of `normal_report.pdf`, questions sensibly grouped, 0 console errors
+
+---
+
 ## Previous Progress (2026-09-24/25)
 
 ### SDK Compatibility

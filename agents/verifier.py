@@ -111,7 +111,11 @@ def _extract_json(text: str):
 
 
 def _code_check(explanations: List[FinalExplanation]) -> List[str]:
-    """Fast, deterministic regex checks."""
+    """Fast, deterministic regex checks.
+
+    Scans the explanation AND every question in both question lists —
+    diagnostic phrasing must not hide in doctor_questions/patient_questions.
+    """
     issues = []
     for exp in explanations:
         for pattern in DIAGNOSTIC_PATTERNS:
@@ -120,6 +124,16 @@ def _code_check(explanations: List[FinalExplanation]) -> List[str]:
                     f"[{exp.test_name}] Contains diagnostic language: "
                     f"matches pattern '{pattern}'"
                 )
+        # P1-question split: same diagnostic scan over both question lists
+        for question in list(exp.doctor_questions) + list(exp.patient_questions):
+            for pattern in DIAGNOSTIC_PATTERNS:
+                if re.search(pattern, question, re.IGNORECASE):
+                    issues.append(
+                        f"[{exp.test_name}] Question contains diagnostic "
+                        f"language: matches pattern '{pattern}'"
+                    )
+        if not exp.doctor_questions and not exp.patient_questions:
+            issues.append(f"[{exp.test_name}] Missing questions for the patient")
         if not exp.citation or exp.citation.strip() == "":
             issues.append(f"[{exp.test_name}] Missing citation")
     return issues

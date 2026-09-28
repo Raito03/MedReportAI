@@ -68,9 +68,14 @@ def main():
         for exp in result["explanations"]:
             with st.expander(f"📋 {exp['test_name']}", expanded=True):
                 st.write(exp["explanation"])
-                st.markdown("**Questions for your doctor:**")
-                for q in exp["doctor_questions"]:
-                    st.markdown(f"- {q}")
+                if exp.get("doctor_questions"):
+                    st.markdown("**Questions to ask your doctor:**")
+                    for q in exp["doctor_questions"]:
+                        st.markdown(f"- {q}")
+                if exp.get("patient_questions"):
+                    st.markdown("**Things to consider:**")
+                    for q in exp["patient_questions"]:
+                        st.markdown(f"- {q}")
                 st.caption(f"Source: {exp['citation']}")
 
 

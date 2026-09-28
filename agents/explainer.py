@@ -68,7 +68,11 @@ For each value, use these exact keys:
 - explanation: 1-2 sentences in plain English. NO diagnostic claims. \
 NO "you have..." or "this indicates..." phrasing. Use hedging: \
 "results in this range are generally considered..."
-- doctor_questions: array of 2-3 strings
+- doctor_questions: array of 2-3 strings — questions the PATIENT should ask
+  their DOCTOR/clinician (e.g. "What follow-up do you recommend?")
+- patient_questions: array of 1-3 strings — things the PATIENT should
+  consider, track, or be ready to discuss themselves (e.g. "Track whether
+  symptoms correlate with meals"); never phrases that sound like a diagnosis
 - citation: USE THE CITATION PROVIDED IN THE INPUT — do not make up citations \
 and do not change or invent any URL in it. If the input's citation_status is \
 "unavailable", repeat the provided no-citation text as-is.

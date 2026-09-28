@@ -56,9 +56,14 @@ def main():
     for exp in result["explanations"]:
         print(f"\n--- {exp['test_name']} ---")
         print(f"  {exp['explanation']}")
-        print(f"  Questions for doctor:")
-        for q in exp["doctor_questions"]:
-            print(f"    - {q}")
+        if exp.get("doctor_questions"):
+            print(f"  Questions for doctor:")
+            for q in exp["doctor_questions"]:
+                print(f"    - {q}")
+        if exp.get("patient_questions"):
+            print(f"  Things to consider:")
+            for q in exp["patient_questions"]:
+                print(f"    - {q}")
         print(f"  Source: {exp['citation']}")
 
     if not result["verified"]:

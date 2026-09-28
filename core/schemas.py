@@ -58,6 +58,11 @@ class FinalExplanation(BaseModel):
     test_name: str
     explanation: str
     doctor_questions: List[str]
+    # Patient-directed self-reflection / pre-visit prompts (additive field,
+    # default keeps every existing construction valid). doctor_questions =
+    # questions the patient asks their clinician; patient_questions =
+    # things the patient considers or tracks themselves.
+    patient_questions: List[str] = []
     citation: str
     citation_url: Optional[str] = None  # validated medlineplus.gov URL or None
     citation_status: Literal["available", "unavailable"] = "unavailable"

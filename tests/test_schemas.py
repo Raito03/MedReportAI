@@ -62,6 +62,26 @@ def test_risk_flagged_value_rejects_invalid_status():
         )
 
 
+def test_final_explanation_default_patient_questions():
+    """patient_questions is additive: default [] keeps existing constructions valid."""
+    e = FinalExplanation(
+        test_name="Glucose",
+        explanation="Glucose measures blood sugar levels.",
+        doctor_questions=["What should my target range be?"],
+        citation="MedlinePlus: Blood Glucose (https://medlineplus.gov/bloodglucose.html)",
+    )
+    assert e.patient_questions == []
+
+    e2 = FinalExplanation(
+        test_name="Glucose",
+        explanation="Glucose measures blood sugar levels.",
+        doctor_questions=["What follow-up do you recommend?"],
+        patient_questions=["Track whether symptoms correlate with meals"],
+        citation="MedlinePlus: Blood Glucose (https://medlineplus.gov/bloodglucose.html)",
+    )
+    assert e2.patient_questions == ["Track whether symptoms correlate with meals"]
+
+
 def test_final_explanation():
     e = FinalExplanation(
         test_name="Glucose",
@@ -93,6 +113,7 @@ if __name__ == "__main__":
     test_risk_flagged_value_unavailable()
     test_risk_flagged_value_all_statuses()
     test_risk_flagged_value_rejects_invalid_status()
+    test_final_explanation_default_patient_questions()
     test_final_explanation()
     test_verifier_result_pass()
     test_verifier_result_fail()
