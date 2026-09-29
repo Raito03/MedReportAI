@@ -6,6 +6,10 @@ injected verbatim into the next explain() prompt and the loop retries — at
 most MAX_RETRIES times (MAX_RETRIES + 1 generation attempts total). After
 the bound, the pipeline returns a controlled failure (verified=False plus the
 issues) — never an unverified explanation presented as verified.
+Malformed-output retry: a ValueError from the explain stage (truncated or
+unparseable LLM JSON) is a transient model failure, so it retries through
+the same MAX_RETRIES-bounded loop as a verifier rejection — regenerating
+fresh — and only raises once the bound is spent.
 All agent calls are async (openrouter-agent-sdk uses call_model()).
 """
 
@@ -156,6 +160,28 @@ async def run_pipeline(pdf_path: str, logger: Optional[PipelineLogger] = None) -
                 PipelineStage.EXPLANATION, stage_start,
                 metadata={"explanation_count": len(explanations), "attempt": attempt + 1},
             )
+        except ValueError as exc:
+            # Transient malformed/truncated explainer output (JSON parse
+            # failure or schema ValidationError — both are ValueError).
+            # Bounded retry through the SAME loop: the next attempt
+            # regenerates fresh (verification is still None, so no
+            # correction section). Exhausting the bound re-raises — a run
+            # where every generation is malformed fails loudly, never with
+            # unparseable output presented as results.
+            logger.log_stage_failure(
+                PipelineStage.EXPLANATION, stage_start,
+                failure_type=classify_exception(exc),
+                reason=f"{type(exc).__name__}: {exc}",
+                retry_count=retry_count,
+            )
+            if attempt >= MAX_RETRIES:
+                raise
+            print(
+                f"      [RETRY] Malformed LLM output ({type(exc).__name__}) — "
+                "regenerating explanations..."
+            )
+            retry_count += 1
+            continue
         except Exception as exc:
             failure_type = classify_exception(exc)
             logger.log_stage_failure(

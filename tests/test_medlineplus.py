@@ -159,6 +159,16 @@ def test_resolve_loinc_from_test_name():
     assert resolve_loinc_from_test_name("CREATININE") == "2160-0"  # case insensitive
     assert resolve_loinc_from_test_name("") == ""
     assert resolve_loinc_from_test_name("Nonexistent") == ""
+    # Bare-acronym alias: lab reports print "WBC"/"RBC" (no " count" suffix)
+    # and the extraction LLM copies the PDF's test_name exactly — the bare
+    # form must resolve, or the value loses its range AND its citation.
+    assert resolve_loinc_from_test_name("WBC") == "6690-2"
+    assert resolve_loinc_from_test_name("RBC") == "789-8"
+    assert resolve_loinc_from_test_name("wbc") == "6690-2"
+    # Exact names still win and non-acronym names gain no aliases:
+    assert resolve_loinc_from_test_name("WBC count") == "6690-2"
+    assert resolve_loinc_from_test_name("Hemoglobin") == "718-7"
+    assert resolve_loinc_from_test_name("White") == ""
     print("  PASS: LOINC resolution from test name")
 
 

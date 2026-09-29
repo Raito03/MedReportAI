@@ -872,6 +872,28 @@ $ .venv/Scripts/python -m pytest -q
 
 ---
 
+## Abnormal-report reliability: truncated LLM output + bare-acronym LOINC gap (2026-09-29)
+
+**Reported symptom**: uploading `data/samples/abnormal_report.pdf` in Streamlit aborted with `ValueError: Could not parse JSON from LLM response: { "test_name": "Hemoglobin", "explanation": ...` (response cut mid-sentence) — no results shown.
+
+**Root causes (two independent defects, both reproduced):**
+
+1. **Intermittent truncated explainer output.** The explainer LLM occasionally returns JSON cut off mid-sentence; `_extract_json` raises, and the orchestrator re-raised any explain-stage exception — one glitch killed the whole run. Not a token cap: a direct probe completed ~11.9k output tokens with `finish_reason: stop` on the same model, and the same PDF parsed fine on re-run.
+2. **Deterministic WBC/RBC chain gap.** The PDF prints bare `WBC`/`RBC` → extraction LLM returns `unknown` (correct — never guesses codes) → `resolve_loinc_from_test_name("WBC")` missed because the name index only had `wbc count` → no reference range → status `unavailable` → `get_citation("unknown", ...)` unavailable → the verifier rejected with "missing citations" on every run.
+
+**Why these were not taken note of earlier**: the 2026-09-28 live browser verification recorded the abnormal PDF as PASS — both defects were latent then. The truncation is intermittent (the model parsed fine on some runs), and the WBC/RBC gap only triggers when the extraction LLM returns `unknown` for a bare acronym; during that run the model happened to emit real codes, so the resolution miss never fired. The earlier runs also only checked "does the demo pass" end-to-end — no per-test citation or status assertions existed to expose a silent `unavailable` on individual values, and no test covered malformed-output retry (the orchestrator re-raised by design).
+
+**Fixes:**
+
+* `pipeline/orchestrator.py` — explain-stage `ValueError` (JSON parse / schema ValidationError) now retries **fresh** through the same `MAX_RETRIES`-bounded loop (no correction section — the verifier never ran on the failed attempt); once the bound is spent it re-raises. Failure is logged as `llm_parse_error` with `retry_count` before the increment (P1-T4 semantics preserved).
+* `tools/medlineplus_connect.py` — the name index also maps the leading all-caps acronym of multi-word names (`WBC count` → `wbc`, `LDL cholesterol` → `ldl`); exact names always win (`setdefault`).
+
+**Tests**: +2 in `tests/test_p1_t2_self_correction.py` (recovery path incl. observability assertions; exhaustion raises after exactly `MAX_RETRIES + 1` attempts), alias assertions in `tests/test_medlineplus.py`. Suite: **253 passed, 4 skipped, 0 failed**.
+
+**Live verification (real OpenRouter, `abnormal_report.pdf`)**: `VERIFIED True`, 14/14 explanations, 0 missing citations, WBC → `6690-2` / RBC → `789-8` with real MedlinePlus URLs, and one verifier rejection recovered through the P1-T2 correction loop (`verification_failure: 1`, then pass).
+
+---
+
 ## Next Steps
 
 1. ~~Run live demonstrations~~ — done 2026-09-28: integration tests 3/3, Streamlit normal/abnormal/injection browser runs all passed (see P1-T5 browser verification above); P1-T1 5/5 live and P1-T3 4/4 live already recorded.

@@ -21,17 +21,22 @@ Scenarios:
 4. Safety invariants: the correction prompt restates — never relaxes — the
    rules, structured lab/risk data passes through unchanged, and the final
    citation still comes from the trusted lookup layer, never the LLM.
+5. Malformed-output retry: a truncated/unparseable explainer response
+   (ValueError from _extract_json) retries fresh through the same bounded
+   loop; exhausting the bound raises instead of surfacing garbage.
 """
 
 import asyncio
 import json
 import os
 import sys
+import pytest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pipeline.orchestrator as orch
+from core.observability import FailureType, PipelineLogger, PipelineStage
 from core.schemas import FinalExplanation
 from pipeline.orchestrator import MAX_RETRIES, run_pipeline
 from tests.fake_llm import FakeLLM, use_fake_llm
@@ -308,6 +313,69 @@ def test_correction_prompt_restates_rules_and_preserves_data():
     print("  PASS: correction injects issues only — data, statuses, rules intact")
 
 
+# ---------------------------------------------------------------------------
+# 5. Malformed (truncated) explainer output — bounded retry
+# ---------------------------------------------------------------------------
+
+# Mimics a truncated live-LLM response (observed on the abnormal report):
+# opening brace, no closing brace — _extract_json rejects it with ValueError.
+MALFORMED_EXPLANATION_TEXT = '{"test_name": "Glucose", "explanation": "truncated mid-se'
+
+def test_malformed_explanation_retries_fresh_and_recovers():
+    """Truncated explainer JSON -> ValueError -> bounded retry regenerates
+    fresh (no correction section) -> verifier accepts -> verified=True."""
+    fake = FakeLLM(responses=[
+        EXTRACT_ITEMS, RISK_ITEMS,
+        MALFORMED_EXPLANATION_TEXT,                 # call 3: truncated -> raise
+        CORRECTED_EXPLANATION_ITEMS, VERIFIER_PASS,  # calls 4-5: recovery
+    ])
+    logger = PipelineLogger()
+    with use_fake_llm(fake), \
+         patch("tools.medlineplus_connect.urllib.request.urlopen",
+               side_effect=_canned_urlopen):
+        result = asyncio.run(run_pipeline(SYNTHETIC_PDF, logger=logger))
+
+    assert result["verified"] is True
+    assert result["issues"] == []
+    assert fake.call_count == 5
+    assert _count_calls(fake, "Explain these lab results") == 2
+
+    # The retry was a FRESH generation — the verifier never ran on the
+    # malformed attempt, so no correction section exists:
+    _, corr = _explain_prompt_parts(fake.calls[3]["input"])
+    assert corr == ""
+
+    # Observability recorded the parse failure (with retry_count before the
+    # increment) ahead of the successful regeneration:
+    failures = [
+        e for e in logger.get_events_for_stage(PipelineStage.EXPLANATION)
+        if e.status == "failed"
+    ]
+    assert len(failures) == 1
+    assert failures[0].failure_type == FailureType.LLM_PARSE_ERROR
+    assert failures[0].retry_count == 0
+
+    # Trusted citation still governs the recovered explanation:
+    assert result["explanations"][0]["citation"] == TRUSTED_CITATION
+    print("  PASS: malformed explanation -> bounded fresh retry -> verified=True")
+
+def test_malformed_explanation_exhausts_bound_and_raises():
+    """Every generation malformed -> bound spent -> ValueError propagates
+    (loud failure; unparseable output is never shown as results)."""
+    fake = FakeLLM(responses=[
+        EXTRACT_ITEMS, RISK_ITEMS,
+        MALFORMED_EXPLANATION_TEXT,
+        MALFORMED_EXPLANATION_TEXT,
+    ])
+    with pytest.raises(ValueError, match="Could not parse JSON"):
+        _run(fake)
+
+    # Exactly 2 + 2 bounded explain attempts — FakeLLM raises on any extra
+    # call, so an unbounded loop would fail this assertion too:
+    assert fake.call_count == 4
+    assert _count_calls(fake, "Explain these lab results") == 2
+    print("  PASS: repeated malformed output -> bound respected -> raises")
+
 if __name__ == "__main__":
     print("=== P1-T2 Verifier Self-Correction ===\n")
     test_correction_success_path_end_to_end()
@@ -315,4 +383,6 @@ if __name__ == "__main__":
     test_retry_limit_respected_for_raised_bound()
     test_retry_limit_zero_makes_single_attempt()
     test_correction_prompt_restates_rules_and_preserves_data()
+    test_malformed_explanation_retries_fresh_and_recovers()
+    test_malformed_explanation_exhausts_bound_and_raises()
     print("\nAll P1-T2 self-correction tests passed.")

@@ -101,14 +101,26 @@ def _load_mapping() -> dict:
 
 
 def _load_supported_labs_by_name() -> dict:
-    """Load supported_labs.json indexed by test_name (cached)."""
+    """Load supported_labs.json indexed by test_name (cached).
+
+    Also indexes the leading acronym of multi-word names ("WBC count" ->
+    "wbc", "LDL cholesterol" -> "ldl"): lab reports often print the bare
+    acronym and the extraction LLM copies the PDF's test_name exactly, so
+    the bare form must resolve too. Exact names always win over aliases.
+    """
     global _supported_labs_by_name
     if _supported_labs_by_name is None:
         with open(SUPPORTED_LABS_PATH, "r") as f:
             raw = json.load(f)
         _supported_labs_by_name = {}
         for test in raw.get("tests", []):
-            _supported_labs_by_name[test["test_name"].lower()] = test["loinc_code"]
+            name = test["test_name"]
+            _supported_labs_by_name[name.lower()] = test["loinc_code"]
+            first, sep, _ = name.partition(" ")
+            if sep and len(first) >= 2 and first.isalpha() and first.isupper():
+                _supported_labs_by_name.setdefault(
+                    first.lower(), test["loinc_code"]
+                )
     return _supported_labs_by_name
 
 
